@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PeopleRate - Discover, Read, and Write Reviews About People</title>
+    <link rel="stylesheet" href="/static/css/trustpilot_style.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <meta name="description" content="Find and review people based on their professional and personal experiences. Read honest reviews and share your experiences.">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>🌟 PeopleRate</h2>
+            </div>
+            <div class="nav-menu">
+                <a href="#search" class="nav-link">Search People</a>
+                <a href="#categories" class="nav-link">Categories</a>
+                <a href="#reviews" class="nav-link">Recent Reviews</a>
+                <a href="#about" class="nav-link">How it Works</a>
+                
+                <!-- Profile Section (shown when logged in) -->
+                <div id="profileSection" class="profile-section" style="display: none;">
+                    <div class="profile-dropdown">
+                        <button class="profile-button" onclick="toggleProfileMenu()">
+                            <img id="profilePhoto" class="profile-photo" src="/static/default-avatar.png" alt="Profile" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM0Qzk1NjMiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBzdHlsZT0icG9zaXRpb246IGFic29sdXRlOyB0b3A6IDUwJTsgbGVmdDogNTAlOyB0cmFuc2Zvcm06IHRyYW5zbGF0ZSgtNTAlLCAtNTAlKTsiPgo8cGF0aCBkPSJNMjAgMjJ2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiIgZmlsbD0iI2ZmZiIvPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiIGZpbGw9IiNmZmYiLz4KPC9zdmc+Cjwvc3ZnPgo='">
+                            <span id="profileUsername" class="profile-username">User</span>
+                            <span class="profile-arrow">▼</span>
+                        </button>
+                        <div id="profileMenu" class="profile-menu">
+                            <div class="profile-menu-header">
+                                <img id="profileMenuPhoto" class="profile-menu-photo" src="/static/default-avatar.png" alt="Profile" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM0Qzk1NjMiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBzdHlsZT0icG9zaXRpb246IGFic29sdXRlOyB0b3A6IDUwJTsgbGVmdDogNTAlOyB0cmFuc2Zvcm06IHRyYW5zbGF0ZSgtNTAlLCAtNTAlKTsiPgo8cGF0aCBkPSJNMjAgMjJ2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiIgZmlsbD0iI2ZmZiIvPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiIGZpbGw9IiNmZmYiLz4KPC9zdmc+Cjwvc3ZnPgo='" >
+                                <div class="profile-menu-info">
+                                    <div id="profileMenuUsername" class="profile-menu-username">@username</div>
+                                    <div id="profileMenuEmail" class="profile-menu-email">user@email.com</div>
+                                </div>
+                            </div>
+                            <div class="profile-menu-items">
+                                <a href="#" class="profile-menu-item" onclick="openPhotoUpload()">
+                                    📷 Change Photo
+                                </a>
+                                <a href="#" class="profile-menu-item" onclick="viewMyProfile()">
+                                    👤 View Profile
+                                </a>
+                                <a href="#" class="profile-menu-item" onclick="viewMyReviews()">
+                                    ⭐ My Reviews
+                                </a>
+                                <a href="#" class="profile-menu-item" onclick="accountSettings()">
+                                    ⚙️ Settings
+                                </a>
+                                <hr class="profile-menu-divider">
+                                <a href="#" class="profile-menu-item logout-item" onclick="logout()">
+                                    🚪 Log Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Login button (shown when logged out) -->
+                <a href="/auth" id="loginButton" class="nav-cta">Write a Review</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Photo Upload Modal -->
+    <div id="photoUploadModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Profile Photo</h3>
+                <button class="modal-close" onclick="closePhotoUpload()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="photo-upload-area">
+                    <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoSelect(event)" style="display: none;">
+                    <div class="photo-preview-container">
+                        <img id="photoPreview" class="photo-preview" src="" alt="Preview" style="display: none;">
+                        <div id="photoPlaceholder" class="photo-placeholder">
+                            <div class="photo-placeholder-icon">📷</div>
+                            <div class="photo-placeholder-text">Click to select a photo</div>
+                        </div>
+                    </div>
+                    <button class="photo-select-btn" onclick="document.getElementById('photoInput').click()">
+                        Select Photo
+                    </button>
+                </div>
+                <div class="photo-upload-actions">
+                    <button class="btn-secondary" onclick="closePhotoUpload()">Cancel</button>
+                    <button class="btn-primary" onclick="uploadPhoto()" id="uploadPhotoBtn" disabled>Update Photo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <h1>Find people you can trust</h1>
+        <p class="subtitle">Discover, read, and write reviews about professionals, colleagues, and service providers</p>
+        <a href="#search" class="hero-cta">Start Searching →</a>
+    </section>
+
+    <div class="main-content">
+        <!-- Search Section -->
+        <section id="search" class="search-section">
+            <h2>What are you looking for?</h2>
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by name, company, phone number, LinkedIn, or location...">
+                <button class="search-btn" onclick="searchPeople()">Search</button>
+            </div>
+            
+            <!-- Search Results -->
+            <div id="searchResults" class="search-results"></div>
+        </section>
+
+        <!-- Categories Section -->
+        <section id="categories" class="categories-section">
+            <h3>Browse by Category</h3>
+            <div class="categories-grid">
+                <a href="#" class="category-tag" onclick="searchByCategory('Technology')">🖥️ Technology</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Healthcare')">🏥 Healthcare</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Finance')">💰 Finance</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Education')">🎓 Education</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Real Estate')">🏠 Real Estate</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Legal')">⚖️ Legal</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Marketing')">📈 Marketing</a>
+                <a href="#" class="category-tag" onclick="searchByCategory('Consulting')">💼 Consulting</a>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section">
+            <h2>Why Choose PeopleRate?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Advanced Search</h3>
+                    <p>Find people by name, company, phone number, LinkedIn profile, location, and more. Our powerful search helps you discover the right person.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⭐</div>
+                    <h3>Verified Reviews</h3>
+                    <p>Read authentic reviews from real people who have worked with or interacted with the person you're researching.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Trust & Safety</h3>
+                    <p>Our platform ensures review authenticity and provides a safe environment for sharing honest feedback.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Professional Insights</h3>
+                    <p>Get detailed insights about professionals including their expertise, work quality, and reliability from peer reviews.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sample People Display -->
+        <section id="sample-people" class="recent-reviews">
+            <h2>Discover Professionals</h2>
+            <div id="samplePeopleContainer">
+                <!-- Sample people will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Recent Reviews Section -->
+        <section id="reviews" class="recent-reviews">
+            <h2>Recent Reviews</h2>
+            <div id="recentReviewsContainer">
+                <!-- Recent reviews will be loaded here -->
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="features-section">
+            <h2>We're PeopleRate</h2>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto; font-size: 1.2rem; color: var(--text-light); line-height: 1.6;">
+                We're a review platform that's open to everyone. Our vision is to become the universal symbol of trust for professional relationships — by empowering people to make informed decisions about who they work with, and helping professionals improve their reputation.
+            </p>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About</h3>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">How PeopleRate Works</a></li>
+                    <li><a href="#">Contact</a></li>
+                    <li><a href="#">Blog</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Community</h3>
+                <ul>
+                    <li><a href="#">Trust in Reviews</a></li>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="/auth">Log In</a></li>
+                    <li><a href="/auth">Sign Up</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>For Professionals</h3>
+                <ul>
+                    <li><a href="#">Manage Your Profile</a></li>
+                    <li><a href="#">Respond to Reviews</a></li>
+                    <li><a href="#">Professional Guidelines</a></li>
+                    <li><a href="#">Success Stories</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <ul>
+                    <li><a href="#">LinkedIn</a></li>
+                    <li><a href="#">Twitter</a></li>
+                    <li><a href="#">Facebook</a></li>
+                    <li><a href="#">Instagram</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 PeopleRate, Inc. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Search functionality
+        async function searchPeople() {
+            const query = document.getElementById('searchInput').value;
+            if (!query.trim()) return;
+
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
+
+            try {
+                const response = await fetch(`/api/persons/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                displaySearchResults(data.persons || []);
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = '<div class="alert alert-error">Search failed. Please try again.</div>';
+            }
+        }
+
+        // Search by category
+        function searchByCategory(category) {
+            document.getElementById('searchInput').value = category;
+            searchPeople();
+        }
+
+        // Display search results
+        function displaySearchResults(people) {
+            const container = document.getElementById('searchResults');
+            
+            if (people.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No people found. Try adjusting your search.</div>';
+                return;
+            }
+
+            const html = people.map(person => createPersonCard(person)).join('');
+            container.innerHTML = html;
+        }
+
+        // Create person card HTML
+        function createPersonCard(person) {
+            const rating = person.average_rating || 0;
+            const reviewCount = person.review_count || 0;
+            const starsHtml = createStarsHtml(rating);
+            
+            return `
+                <div class="person-card">
+                    <div class="person-header">
+                        <div>
+                            <h3 class="person-name">${person.name}</h3>
+                            <div class="person-title">${person.job_title || ''} ${person.company ? `at ${person.company}` : ''}</div>
+                            <div class="person-details">
+                                ${person.city ? `📍 ${person.city}` : ''}
+                                ${person.phone ? `📞 ${person.phone}` : ''}
+                                ${person.email ? `✉️ ${person.email}` : ''}
+                            </div>
+                        </div>
+                        <div class="trust-score">
+                            TrustScore ${rating.toFixed(1)}
+                        </div>
+                    </div>
+                    <div class="person-rating">
+                        <div class="stars">${starsHtml}</div>
+                        <span class="rating-score">${rating.toFixed(1)}</span>
+                        <span class="rating-count">(${reviewCount} reviews)</span>
+                    </div>
+                    ${person.bio ? `<p class="person-details mt-2">${person.bio}</p>` : ''}
+                </div>
+            `;
+        }
+
+        // Create stars HTML
+        function createStarsHtml(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let html = '';
+            
+            // Full stars
+            for (let i = 0; i < fullStars; i++) {
+                html += '<div class="star filled"></div>';
+            }
+            
+            // Half star
+            if (hasHalfStar) {
+                html += '<div class="star half-filled"></div>';
+            }
+            
+            // Empty stars
+            for (let i = 0; i < emptyStars; i++) {
+                html += '<div class="star"></div>';
+            }
+            
+            return html;
+        }
+
+        // Load sample people on page load
+        async function loadSamplePeople() {
+            try {
+                const response = await fetch('/api/persons/search?q=&limit=4');
+                const data = await response.json();
+                
+                const container = document.getElementById('samplePeopleContainer');
+                const html = data.persons?.slice(0, 4).map(person => createPersonCard(person)).join('') || '';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading sample people:', error);
+            }
+        }
+
+        // Load recent reviews
+        async function loadRecentReviews() {
+            try {
+                const response = await fetch('/api/reviews/?limit=5');
+                const data = await response.json();
+                
+                const container = document.getElementById('recentReviewsContainer');
+                const html = data.reviews?.map(review => createReviewCard(review)).join('') || '';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading recent reviews:', error);
+            }
+        }
+
+        // Create review card HTML with anonymous usernames
+        function createReviewCard(review) {
+            const starsHtml = createStarsHtml(review.rating);
+            const date = new Date(review.created_at).toLocaleDateString();
+            
+            return `
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="stars">${starsHtml}</div>
+                        <div class="review-date">${date}</div>
+                    </div>
+                    ${review.title ? `<h4 class="font-bold mb-1">${review.title}</h4>` : ''}
+                    <div class="review-text">${review.comment}</div>
+                    <div class="review-author">
+                        <strong>@${review.reviewer_username}</strong> 
+                        ${review.relationship ? `• ${review.relationship}` : ''} 
+                        • Review for: <strong>${review.person_name || 'Anonymous'}</strong>
+                        ${review.would_recommend ? ' • ✅ Recommends' : ''}
+                    </div>
+                    ${review.is_verified ? '<div class="trust-score" style="display: inline-block; font-size: 0.8rem; margin-top: 0.5rem;">✓ Verified Review</div>' : ''}
+                </div>
+            `;
+        }
+
+        // Enter key search
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchPeople();
+            }
+        });
+
+        // Load data when page loads
+        window.addEventListener('load', function() {
+            checkLoginStatus();
+            loadSamplePeople();
+            loadRecentReviews();
+        });
+
+        // Check if user is logged in
+        async function checkLoginStatus() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('/auth/me', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const user = await response.json();
+                        showProfileSection(user);
+                    } else {
+                        localStorage.removeItem('token');
+                        showLoginButton();
+                    }
+                } catch (error) {
+                    console.error('Error checking login status:', error);
+                    localStorage.removeItem('token');
+                    showLoginButton();
+                }
+            } else {
+                showLoginButton();
+            }
+        }
+
+        // Show profile section when logged in
+        function showProfileSection(user) {
+            document.getElementById('profileSection').style.display = 'block';
+            document.getElementById('loginButton').style.display = 'none';
+            
+            // Update profile info
+            document.getElementById('profileUsername').textContent = `@${user.username}`;
+            document.getElementById('profileMenuUsername').textContent = `@${user.username}`;
+            document.getElementById('profileMenuEmail').textContent = user.email;
+            
+            // Load profile photo if available
+            if (user.profile_photo) {
+                document.getElementById('profilePhoto').src = user.profile_photo;
+                document.getElementById('profileMenuPhoto').src = user.profile_photo;
+            }
+        }
+
+        // Show login button when logged out
+        function showLoginButton() {
+            document.getElementById('profileSection').style.display = 'none';
+            document.getElementById('loginButton').style.display = 'block';
+        }
+
+        // Toggle profile dropdown menu
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Close profile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const profileSection = document.getElementById('profileSection');
+            const profileMenu = document.getElementById('profileMenu');
+            
+            if (!profileSection.contains(event.target)) {
+                profileMenu.style.display = 'none';
+            }
+        });
+
+        // Profile menu actions
+        function openPhotoUpload() {
+            document.getElementById('photoUploadModal').style.display = 'flex';
+            document.getElementById('profileMenu').style.display = 'none';
+        }
+
+        function closePhotoUpload() {
+            document.getElementById('photoUploadModal').style.display = 'none';
+            document.getElementById('photoInput').value = '';
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('photoPlaceholder').style.display = 'block';
+            document.getElementById('uploadPhotoBtn').disabled = true;
+        }
+
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').src = e.target.result;
+                    document.getElementById('photoPreview').style.display = 'block';
+                    document.getElementById('photoPlaceholder').style.display = 'none';
+                    document.getElementById('uploadPhotoBtn').disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function uploadPhoto() {
+            const fileInput = document.getElementById('photoInput');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('photo', file);
+            
+            const token = localStorage.getItem('token');
+            
+            try {
+                // For now, we'll simulate the upload and store as base64
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const photoUrl = e.target.result;
+                    
+                    // Update profile photos
+                    document.getElementById('profilePhoto').src = photoUrl;
+                    document.getElementById('profileMenuPhoto').src = photoUrl;
+                    
+                    // Store in localStorage (in a real app, this would be saved to server)
+                    localStorage.setItem('profilePhoto', photoUrl);
+                    
+                    closePhotoUpload();
+                    
+                    // Show success message
+                    showNotification('Profile photo updated successfully!', 'success');
+                };
+                reader.readAsDataURL(file);
+                
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                showNotification('Failed to upload photo. Please try again.', 'error');
+            }
+        }
+
+        function viewMyProfile() {
+            document.getElementById('profileMenu').style.display = 'none';
+            showNotification('Profile page coming soon!', 'info');
+        }
+
+        function viewMyReviews() {
+            document.getElementById('profileMenu').style.display = 'none';
+            showNotification('My Reviews page coming soon!', 'info');
+        }
+
+        function accountSettings() {
+            document.getElementById('profileMenu').style.display = 'none';
+            showNotification('Account Settings coming soon!', 'info');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('profilePhoto');
+            showLoginButton();
+            document.getElementById('profileMenu').style.display = 'none';
+            showNotification('You have been logged out successfully.', 'success');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('notification-show');
+            }, 100);
+            
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('notification-show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

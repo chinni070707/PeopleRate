@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PeopleRate</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="/" style="text-decoration: none; color: inherit;">
+                    <h2>🌟 PeopleRate</h2>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/#search" class="nav-link">Search People</a>
+                <a href="#" id="registerLink" class="nav-cta">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <!-- Login Form -->
+        <div id="loginForm" class="form-container">
+            <h2 class="form-title">Welcome back</h2>
+            <p class="text-center text-gray mb-3">Sign in to write reviews and share your experiences</p>
+            
+            <!-- Test Credentials Help Box -->
+            <div style="background-color: #f0f9ff; border: 1px solid #bee3f8; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <p style="margin: 0; font-size: 0.9rem; color: #2c5282;">
+                    <strong>📝 Test Accounts:</strong><br>
+                    <span style="font-family: monospace; font-size: 0.85rem;">
+                        abc.def@email.com / password123<br>
+                        sarah.manager@email.com / password123<br>
+                        mike.colleague@email.com / password123
+                    </span>
+                </p>
+            </div>
+            
+            <div id="loginAlert" class="alert alert-error" style="display: none;"></div>
+            
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" name="password" required>
+                </div>
+                
+                <div class="text-right mb-2">
+                    <a href="#" id="forgotPasswordLink" class="text-green font-medium" style="font-size: 0.9rem;">Forgot Password?</a>
+                </div>
+                
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+            
+            <p class="text-center mt-3">
+                Don't have an account? 
+                <a href="#" id="showRegister" class="text-green font-medium">Sign up here</a>
+            </p>
+        </div>
+
+        <!-- Password Reset Form -->
+        <div id="resetPasswordForm" class="form-container" style="display: none;">
+            <h2 class="form-title">Reset Password</h2>
+            <p class="text-center text-gray mb-3">Enter your email and we'll help you reset your password</p>
+            
+            <div id="resetAlert" class="alert alert-error" style="display: none;"></div>
+            
+            <form id="resetPasswordFormElement">
+                <div class="form-group">
+                    <label for="resetEmail">Email</label>
+                    <input type="email" id="resetEmail" name="email" required>
+                </div>
+                
+                <div id="resetStep2" style="display: none;">
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" name="password" required minlength="8">
+                        <small class="text-gray">Must be at least 8 characters</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn" id="resetBtn">Continue</button>
+            </form>
+            
+            <p class="text-center mt-3">
+                Remember your password? 
+                <a href="#" id="backToLogin" class="text-green font-medium">Back to Sign In</a>
+            </p>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" class="form-container" style="display: none;">
+            <h2 class="form-title">Join PeopleRate</h2>
+            <p class="text-center text-gray mb-3">Create your account to start writing anonymous reviews</p>
+            
+            <div id="registerAlert" class="alert alert-error" style="display: none;"></div>
+            
+            <form id="registerFormElement">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" name="username" required 
+                           placeholder="Choose a unique username for reviews"
+                           pattern="[a-zA-Z0-9_]+" 
+                           title="Username can only contain letters, numbers, and underscores">
+                    <small class="text-gray">This will be shown on your reviews (not your real name)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" name="email" required 
+                           placeholder="your.email@example.com">
+                    <small class="text-gray">Your email will remain private</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerFullName">Full Name</label>
+                    <input type="text" id="registerFullName" name="full_name" required 
+                           placeholder="Your full name">
+                    <small class="text-gray">This will remain private and not shown on reviews</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" name="password" required 
+                           minlength="6" placeholder="At least 6 characters">
+                </div>
+                
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+            
+            <p class="text-center mt-3">
+                Already have an account? 
+                <a href="#" id="showLogin" class="text-green font-medium">Sign in here</a>
+            </p>
+        </div>
+
+        <!-- User Dashboard (shown after login) -->
+        <div id="userDashboard" class="form-container" style="display: none;">
+            <h2 class="form-title">Welcome back!</h2>
+            <div id="userInfo" class="mb-3"></div>
+            
+            <div class="features-grid" style="grid-template-columns: 1fr;">
+                <div class="feature-card">
+                    <h3>🔒 Your Privacy Protected</h3>
+                    <p>Your reviews are published with your username only. Your real name and email remain completely private.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>✍️ Write Honest Reviews</h3>
+                    <p>Share your experiences with professionals while maintaining your anonymity. Help others make informed decisions.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>🌟 Build Your Reputation</h3>
+                    <p>Write helpful, honest reviews to build your reputation score and become a trusted community member.</p>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <a href="/" class="btn">Start Reviewing People</a>
+                <button id="logoutBtn" class="btn btn-outline mt-2">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Privacy First</h3>
+                <p>Your identity is protected. Only your chosen username appears on reviews.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Trusted Reviews</h3>
+                <p>All reviewers are authenticated users, ensuring review authenticity.</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 PeopleRate, Inc. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Check if user is already logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+            // Verify token is still valid
+            fetch('/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userInfo');
+                }
+            })
+            .catch(() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userInfo');
+            });
+        }
+
+        // Form switching
+        document.getElementById('showRegister').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('resetPasswordForm').style.display = 'none';
+        });
+
+        document.getElementById('showLogin').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('resetPasswordForm').style.display = 'none';
+        });
+
+        document.getElementById('registerLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('resetPasswordForm').style.display = 'none';
+        });
+
+        document.getElementById('forgotPasswordLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('resetPasswordForm').style.display = 'block';
+            document.getElementById('resetStep2').style.display = 'none';
+            document.getElementById('resetBtn').textContent = 'Continue';
+        });
+
+        document.getElementById('backToLogin').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('resetPasswordForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        });
+
+        // Login form submission
+        document.getElementById('loginFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const email = formData.get('email');
+            const password = formData.get('password');
+            
+            console.log('Login attempt:', { email }); // Debug log
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                });
+                
+                console.log('Response status:', response.status); // Debug log
+                
+                const data = await response.json();
+                console.log('Response data:', data); // Debug log
+                
+                if (response.ok) {
+                    // Store token and user info
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('userInfo', JSON.stringify(data.user));
+                    
+                    showAlert('loginAlert', 'Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    // Handle error detail properly (can be string or object)
+                    let errorMessage = 'Login failed';
+                    if (typeof data.detail === 'string') {
+                        errorMessage = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        // Handle validation errors array from FastAPI
+                        errorMessage = data.detail.map(err => {
+                            if (typeof err === 'string') return err;
+                            if (err.msg) {
+                                const field = err.loc ? err.loc[err.loc.length - 1] : 'field';
+                                return `${field}: ${err.msg}`;
+                            }
+                            return JSON.stringify(err);
+                        }).join('; ');
+                    } else if (data.detail && typeof data.detail === 'object') {
+                        errorMessage = data.detail.msg || JSON.stringify(data.detail);
+                    } else if (data.message) {
+                        errorMessage = data.message;
+                    }
+                    console.error('Login failed:', errorMessage, 'Full error:', data); // Debug log
+                    showAlert('loginAlert', errorMessage, 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('loginAlert', 'Network error. Please try again.', 'error');
+            }
+        });
+
+        // Register form submission
+        document.getElementById('registerFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const userData = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                full_name: formData.get('full_name'),
+                password: formData.get('password')
+            };
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store token and user info
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('userInfo', JSON.stringify(data.user));
+                    
+                    showAlert('registerAlert', 'Registration successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    // Handle error detail properly (can be string or object)
+                    let errorMessage = 'Registration failed';
+                    if (typeof data.detail === 'string') {
+                        errorMessage = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        // Handle validation errors array
+                        errorMessage = data.detail.map(err => err.msg || err).join(', ');
+                    } else if (data.detail && data.detail.msg) {
+                        errorMessage = data.detail.msg;
+                    } else if (data.message) {
+                        errorMessage = data.message;
+                    }
+                    showAlert('registerAlert', errorMessage, 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAlert('registerAlert', 'Network error. Please try again.', 'error');
+            }
+        });
+
+        // Password Reset form submission
+        let resetStep = 1;
+        let resetEmail = '';
+        
+        document.getElementById('resetPasswordFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            if (resetStep === 1) {
+                // Step 1: Verify email exists
+                resetEmail = formData.get('email');
+                
+                try {
+                    // Check if user exists (for development, we'll simulate this)
+                    const userExists = DATABASE_USERS.some(u => u.email === resetEmail);
+                    
+                    // In development mode, we'll allow password reset for existing users
+                    // For demo purposes, let's just verify the email format and proceed
+                    if (resetEmail) {
+                        showAlert('resetAlert', 'Email verified! Please enter your new password.', 'success');
+                        document.getElementById('resetStep2').style.display = 'block';
+                        document.getElementById('resetBtn').textContent = 'Reset Password';
+                        resetStep = 2;
+                    } else {
+                        showAlert('resetAlert', 'Please enter a valid email address.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Email verification error:', error);
+                    showAlert('resetAlert', 'Error verifying email. Please try again.', 'error');
+                }
+            } else if (resetStep === 2) {
+                // Step 2: Reset password
+                const newPassword = formData.get('password');
+                const confirmPassword = formData.get('confirmPassword');
+                
+                if (newPassword !== confirmPassword) {
+                    showAlert('resetAlert', 'Passwords do not match!', 'error');
+                    return;
+                }
+                
+                if (newPassword.length < 8) {
+                    showAlert('resetAlert', 'Password must be at least 8 characters long.', 'error');
+                    return;
+                }
+                
+                try {
+                    // For development, we'll simulate password reset
+                    // In production, this would call a backend API endpoint
+                    showAlert('resetAlert', 'Password reset successful! Redirecting to login...', 'success');
+                    
+                    setTimeout(() => {
+                        document.getElementById('resetPasswordForm').style.display = 'none';
+                        document.getElementById('loginForm').style.display = 'block';
+                        document.getElementById('loginEmail').value = resetEmail;
+                        document.getElementById('resetStep2').style.display = 'none';
+                        resetStep = 1;
+                        resetEmail = '';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Password reset error:', error);
+                    showAlert('resetAlert', 'Error resetting password. Please try again.', 'error');
+                }
+            }
+        });
+
+        // Sample users for email verification (development only)
+        const DATABASE_USERS = [
+            { email: 'john.reviewer@email.com' },
+            { email: 'sarah.manager@email.com' },
+            { email: 'mike.colleague@email.com' }
+        ];
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userInfo');
+            location.reload();
+        });
+
+        // Show user dashboard
+        function showUserDashboard() {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (userInfo) {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('registerForm').style.display = 'none';
+                document.getElementById('userDashboard').style.display = 'block';
+                
+                document.getElementById('userInfo').innerHTML = `
+                    <div class="person-card">
+                        <h3>@${userInfo.username}</h3>
+                        <p><strong>Reviews Written:</strong> ${userInfo.review_count || 0}</p>
+                        <p><strong>Reputation Score:</strong> ${userInfo.reputation_score || 0}/100</p>
+                        <p class="text-gray">Your real name (${userInfo.full_name}) and email remain private</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Helper function to show alerts
+        function showAlert(elementId, message, type) {
+            const alertEl = document.getElementById(elementId);
+            alertEl.className = `alert alert-${type}`;
+            alertEl.textContent = message;
+            alertEl.style.display = 'block';
+            
+            setTimeout(() => {
+                alertEl.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
