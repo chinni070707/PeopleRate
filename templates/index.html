@@ -17,7 +17,6 @@
             </div>
             <div class="nav-menu">
                 <a href="#search" class="nav-link">Search People</a>
-                <a href="#categories" class="nav-link">Categories</a>
                 <a href="#reviews" class="nav-link">Recent Reviews</a>
                 <a href="#about" class="nav-link">How it Works</a>
                 
@@ -41,10 +40,10 @@
                                 <a href="#" class="profile-menu-item" onclick="openPhotoUpload()">
                                     📷 Change Photo
                                 </a>
-                                <a href="#" class="profile-menu-item" onclick="viewMyProfile()">
+                                <a href="/profile" class="profile-menu-item">
                                     👤 View Profile
                                 </a>
-                                <a href="#" class="profile-menu-item" onclick="viewMyReviews()">
+                                <a href="/my-reviews" class="profile-menu-item">
                                     ⭐ My Reviews
                                 </a>
                                 <a href="#" class="profile-menu-item" onclick="accountSettings()">
@@ -114,18 +113,29 @@
             <div id="searchResults" class="search-results"></div>
         </section>
 
-        <!-- Categories Section -->
-        <section id="categories" class="categories-section">
-            <h3>Browse by Category</h3>
-            <div class="categories-grid">
-                <a href="#" class="category-tag" onclick="searchByCategory('Technology')">🖥️ Technology</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Healthcare')">🏥 Healthcare</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Finance')">💰 Finance</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Education')">🎓 Education</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Real Estate')">🏠 Real Estate</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Legal')">⚖️ Legal</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Marketing')">📈 Marketing</a>
-                <a href="#" class="category-tag" onclick="searchByCategory('Consulting')">💼 Consulting</a>
+        <!-- Write Review Section (shown when logged in) -->
+        <section id="writeReviewSection" class="write-review-section" style="display: none;">
+            <div class="write-review-card">
+                <h2>✍️ Write a Review</h2>
+                <p class="write-review-subtitle">Share your experience with someone you've worked with or know professionally</p>
+                
+                <div class="write-review-form">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">Search Person to Review</label>
+                            <input type="text" id="personSearchInput" class="form-input" placeholder="Search by name..." oninput="searchPersonForReview()">
+                            <div id="personSearchResults" class="person-search-dropdown"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="selectedPersonInfo" style="display: none; margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                        <strong>Selected:</strong> <span id="selectedPersonName"></span>
+                    </div>
+                    
+                    <button class="btn-write-review" onclick="startWritingReview()" id="writeReviewBtn" disabled>
+                        Start Writing Review →
+                    </button>
+                </div>
             </div>
         </section>
 
@@ -272,7 +282,7 @@
             const starsHtml = createStarsHtml(rating);
             
             return `
-                <div class="person-card">
+                <div class="person-card" onclick="window.location.href='/person/${person.id}'" style="cursor: pointer;">
                     <div class="person-header">
                         <div>
                             <h3 class="person-name">${person.name}</h3>
@@ -422,13 +432,20 @@
             document.getElementById('profileSection').style.display = 'block';
             document.getElementById('loginButton').style.display = 'none';
             
+            // Show write review section
+            document.getElementById('writeReviewSection').style.display = 'block';
+            
             // Update profile info
             document.getElementById('profileUsername').textContent = `@${user.username}`;
             document.getElementById('profileMenuUsername').textContent = `@${user.username}`;
             document.getElementById('profileMenuEmail').textContent = user.email;
             
-            // Load profile photo if available
-            if (user.profile_photo) {
+            // Load profile photo from localStorage or user data
+            const savedPhoto = localStorage.getItem('profilePhoto');
+            if (savedPhoto) {
+                document.getElementById('profilePhoto').src = savedPhoto;
+                document.getElementById('profileMenuPhoto').src = savedPhoto;
+            } else if (user.profile_photo) {
                 document.getElementById('profilePhoto').src = user.profile_photo;
                 document.getElementById('profileMenuPhoto').src = user.profile_photo;
             }
@@ -438,6 +455,7 @@
         function showLoginButton() {
             document.getElementById('profileSection').style.display = 'none';
             document.getElementById('loginButton').style.display = 'block';
+            document.getElementById('writeReviewSection').style.display = 'none';
         }
 
         // Toggle profile dropdown menu
@@ -543,6 +561,77 @@
             document.getElementById('profileMenu').style.display = 'none';
             showNotification('You have been logged out successfully.', 'success');
         }
+
+        // Write Review Functionality
+        let selectedPerson = null;
+        let personSearchTimeout = null;
+
+        async function searchPersonForReview() {
+            const query = document.getElementById('personSearchInput').value;
+            const dropdown = document.getElementById('personSearchResults');
+            
+            if (query.length < 2) {
+                dropdown.classList.remove('active');
+                return;
+            }
+
+            // Debounce search
+            clearTimeout(personSearchTimeout);
+            personSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/persons/search?q=${encodeURIComponent(query)}&limit=10`);
+                    const data = await response.json();
+                    
+                    if (data.persons && data.persons.length > 0) {
+                        dropdown.innerHTML = data.persons.map(person => `
+                            <div class="person-search-item" onclick="selectPerson('${person.id}', '${person.name.replace(/'/g, "\\'")}', '${person.company || ''}', '${person.job_title || ''}')">
+                                <div class="person-item-name">${person.name}</div>
+                                <div class="person-item-details">${person.job_title || ''} ${person.company ? 'at ' + person.company : ''}</div>
+                            </div>
+                        `).join('');
+                        dropdown.classList.add('active');
+                    } else {
+                        dropdown.innerHTML = '<div class="person-search-item">No results found</div>';
+                        dropdown.classList.add('active');
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        }
+
+        function selectPerson(personId, personName, company, jobTitle) {
+            selectedPerson = {
+                id: personId,
+                name: personName,
+                company: company,
+                job_title: jobTitle
+            };
+            
+            document.getElementById('personSearchInput').value = personName;
+            document.getElementById('selectedPersonName').textContent = `${personName} ${jobTitle ? '- ' + jobTitle : ''} ${company ? 'at ' + company : ''}`;
+            document.getElementById('selectedPersonInfo').style.display = 'block';
+            document.getElementById('writeReviewBtn').disabled = false;
+            document.getElementById('personSearchResults').classList.remove('active');
+        }
+
+        function startWritingReview() {
+            if (selectedPerson) {
+                // Store selected person and redirect to person detail page or review form
+                localStorage.setItem('reviewForPerson', JSON.stringify(selectedPerson));
+                window.location.href = `/api/persons/${selectedPerson.id}`;
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('personSearchResults');
+            const input = document.getElementById('personSearchInput');
+            
+            if (dropdown && input && !dropdown.contains(event.target) && event.target !== input) {
+                dropdown.classList.remove('active');
+            }
+        });
 
         // Show notification
         function showNotification(message, type = 'info') {

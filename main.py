@@ -719,6 +719,21 @@ async def auth_page(request: Request):
     """Authentication page for login/register"""
     return templates.TemplateResponse("auth.html", {"request": request})
 
+@app.get("/profile")
+async def profile_page(request: Request):
+    """User profile page"""
+    return templates.TemplateResponse("profile.html", {"request": request})
+
+@app.get("/my-reviews")
+async def my_reviews_page(request: Request):
+    """My reviews page"""
+    return templates.TemplateResponse("my-reviews.html", {"request": request})
+
+@app.get("/person/{person_id}")
+async def person_detail_page(request: Request, person_id: str):
+    """Person detail page"""
+    return templates.TemplateResponse("person-detail.html", {"request": request})
+
 @app.post("/api/auth/register")
 async def register_user(user: UserCreate):
     """Register a new user with username for anonymous reviews"""
@@ -798,6 +813,18 @@ async def login_user(email: str = Form(...), password: str = Form(...)):
             "review_count": user.get("review_count", 0),
             "reputation_score": user.get("reputation_score", 0)
         }
+    }
+
+@app.get("/auth/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Get current authenticated user information"""
+    return {
+        "id": current_user["id"],
+        "email": current_user["email"],
+        "username": current_user["username"],
+        "full_name": current_user["full_name"],
+        "review_count": current_user.get("review_count", 0),
+        "reputation_score": current_user.get("reputation_score", 0)
     }
 
 @app.get("/api/persons/search")

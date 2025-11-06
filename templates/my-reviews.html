@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reviews - PeopleRate</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .reviews-container {
+            max-width: 1200px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #191919;
+            margin-bottom: 10px;
+        }
+
+        .page-subtitle {
+            font-size: 18px;
+            color: #666;
+        }
+
+        .stats-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 40px;
+            justify-content: space-around;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #4C9563;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .filters-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #191919;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .reviews-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .review-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .review-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .review-person-info {
+            flex: 1;
+        }
+
+        .person-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #191919;
+            margin-bottom: 5px;
+        }
+
+        .person-title {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .review-meta {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .review-date {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .review-rating {
+            display: flex;
+            gap: 5px;
+        }
+
+        .star {
+            color: #FFB800;
+            font-size: 18px;
+        }
+
+        .star.empty {
+            color: #ddd;
+        }
+
+        .review-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #191919;
+            margin-bottom: 10px;
+        }
+
+        .review-content {
+            font-size: 15px;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .review-footer {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .review-tag {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .review-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #f5f5f5;
+            border-color: #4C9563;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #191919;
+            margin-bottom: 10px;
+        }
+
+        .empty-text {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .btn-primary {
+            padding: 12px 24px;
+            background: #4C9563;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            background: #3d7a4f;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #4C9563;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            color: #3d7a4f;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="/" style="text-decoration: none; color: inherit;">
+                    <h2>🌟 PeopleRate</h2>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/profile" class="nav-link">Profile</a>
+                
+                <div id="profileSection" class="profile-section" style="display: none;">
+                    <div class="profile-dropdown">
+                        <button class="profile-button" onclick="toggleProfileMenu()">
+                            <img id="profilePhoto" class="profile-photo" src="/static/default-avatar.png" alt="Profile">
+                            <span id="profileUsername" class="profile-username">User</span>
+                            <span class="profile-arrow">▼</span>
+                        </button>
+                        <div id="profileMenu" class="profile-menu">
+                            <div class="profile-menu-header">
+                                <img id="profileMenuPhoto" class="profile-menu-photo" src="/static/default-avatar.png" alt="Profile">
+                                <div class="profile-menu-info">
+                                    <div id="profileMenuUsername" class="profile-menu-username">@username</div>
+                                    <div id="profileMenuEmail" class="profile-menu-email">user@email.com</div>
+                                </div>
+                            </div>
+                            <div class="profile-menu-items">
+                                <a href="/profile" class="profile-menu-item">
+                                    👤 View Profile
+                                </a>
+                                <a href="/my-reviews" class="profile-menu-item">
+                                    ⭐ My Reviews
+                                </a>
+                                <hr class="profile-menu-divider">
+                                <a href="#" class="profile-menu-item logout-item" onclick="logout()">
+                                    🚪 Log Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="/auth" id="loginButton" class="nav-cta">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="reviews-container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <div class="page-header">
+            <h1 class="page-title">My Reviews</h1>
+            <p class="page-subtitle">Manage and track all the reviews you've written</p>
+        </div>
+
+        <div id="loadingMessage" class="loading">Loading your reviews...</div>
+
+        <div id="reviewsContent" style="display: none;">
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <div class="stat-number" id="totalReviews">0</div>
+                    <div class="stat-label">Total Reviews</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="avgRating">0.0</div>
+                    <div class="stat-label">Average Rating</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="helpfulVotes">0</div>
+                    <div class="stat-label">Helpful Votes</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-bar">
+                <span class="filter-label">Sort by:</span>
+                <select class="filter-select" id="sortFilter" onchange="filterReviews()">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="highest">Highest Rating</option>
+                    <option value="lowest">Lowest Rating</option>
+                </select>
+                
+                <span class="filter-label">Filter by rating:</span>
+                <select class="filter-select" id="ratingFilter" onchange="filterReviews()">
+                    <option value="all">All Ratings</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="2">2 Stars</option>
+                    <option value="1">1 Star</option>
+                </select>
+            </div>
+
+            <!-- Reviews List -->
+            <div class="reviews-list" id="reviewsList"></div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">📝</div>
+                <h2 class="empty-title">No reviews yet</h2>
+                <p class="empty-text">Start sharing your experiences by writing your first review!</p>
+                <a href="/" class="btn-primary">Browse People</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let allReviews = [];
+        let filteredReviews = [];
+
+        // Check authentication on page load
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    currentUser = await response.json();
+                    updateNavProfile();
+                    loadReviews();
+                } else {
+                    localStorage.removeItem('token');
+                    window.location.href = '/auth';
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                window.location.href = '/auth';
+            }
+        }
+
+        function updateNavProfile() {
+            document.getElementById('profileSection').style.display = 'block';
+            document.getElementById('loginButton').style.display = 'none';
+            
+            document.getElementById('profileUsername').textContent = `@${currentUser.username}`;
+            document.getElementById('profileMenuUsername').textContent = `@${currentUser.username}`;
+            document.getElementById('profileMenuEmail').textContent = currentUser.email;
+            
+            const savedPhoto = localStorage.getItem('profilePhoto');
+            if (savedPhoto) {
+                document.getElementById('profilePhoto').src = savedPhoto;
+                document.getElementById('profileMenuPhoto').src = savedPhoto;
+            }
+        }
+
+        async function loadReviews() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/reviews/?limit=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Filter reviews by current user
+                    allReviews = data.reviews.filter(review => review.reviewer_id === currentUser.id);
+                    filteredReviews = [...allReviews];
+                    
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('reviewsContent').style.display = 'block';
+                    
+                    if (allReviews.length === 0) {
+                        document.getElementById('emptyState').style.display = 'block';
+                    } else {
+                        updateStats();
+                        displayReviews();
+                    }
+                } else {
+                    throw new Error('Failed to load reviews');
+                }
+            } catch (error) {
+                console.error('Error loading reviews:', error);
+                document.getElementById('loadingMessage').textContent = 'Failed to load reviews';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalReviews').textContent = allReviews.length;
+            
+            if (allReviews.length > 0) {
+                const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+                document.getElementById('avgRating').textContent = avgRating.toFixed(1);
+            }
+            
+            // Helpful votes would come from backend
+            document.getElementById('helpfulVotes').textContent = '0';
+        }
+
+        function displayReviews() {
+            const reviewsList = document.getElementById('reviewsList');
+            reviewsList.innerHTML = '';
+
+            if (filteredReviews.length === 0) {
+                reviewsList.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><h2 class="empty-title">No reviews match your filters</h2></div>';
+                return;
+            }
+
+            filteredReviews.forEach(review => {
+                const reviewCard = createReviewCard(review);
+                reviewsList.appendChild(reviewCard);
+            });
+        }
+
+        function createReviewCard(review) {
+            const card = document.createElement('div');
+            card.className = 'review-card';
+            
+            const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+            const date = new Date(review.created_at).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+
+            card.innerHTML = `
+                <div class="review-header">
+                    <div class="review-person-info">
+                        <div class="person-name">Review for: ${review.person_name || 'Person'}</div>
+                        <div class="person-title">${review.relationship || 'Professional'}</div>
+                    </div>
+                    <div class="review-meta">
+                        <div class="review-date">${date}</div>
+                        <div class="review-rating">
+                            ${stars.split('').map(s => `<span class="star ${s === '☆' ? 'empty' : ''}">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="review-title">${review.title || 'Review'}</div>
+                <div class="review-content">${review.comment}</div>
+                
+                <div class="review-footer">
+                    <span class="review-tag">${review.relationship || 'Professional'}</span>
+                    ${review.work_quality ? `<span class="review-tag">Work Quality: ${review.work_quality}/5</span>` : ''}
+                    ${review.communication ? `<span class="review-tag">Communication: ${review.communication}/5</span>` : ''}
+                    
+                    <div class="review-actions">
+                        <button class="btn-icon" onclick="editReview('${review.id}')">✏️ Edit</button>
+                        <button class="btn-icon" onclick="deleteReview('${review.id}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function filterReviews() {
+            const sortValue = document.getElementById('sortFilter').value;
+            const ratingValue = document.getElementById('ratingFilter').value;
+
+            // Filter by rating
+            if (ratingValue === 'all') {
+                filteredReviews = [...allReviews];
+            } else {
+                filteredReviews = allReviews.filter(r => r.rating === parseInt(ratingValue));
+            }
+
+            // Sort reviews
+            switch(sortValue) {
+                case 'newest':
+                    filteredReviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    break;
+                case 'oldest':
+                    filteredReviews.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    break;
+                case 'highest':
+                    filteredReviews.sort((a, b) => b.rating - a.rating);
+                    break;
+                case 'lowest':
+                    filteredReviews.sort((a, b) => a.rating - b.rating);
+                    break;
+            }
+
+            displayReviews();
+        }
+
+        function editReview(reviewId) {
+            showNotification('Edit review feature coming soon!', 'info');
+        }
+
+        function deleteReview(reviewId) {
+            if (confirm('Are you sure you want to delete this review?')) {
+                showNotification('Delete review feature coming soon!', 'info');
+            }
+        }
+
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('profilePhoto');
+            window.location.href = '/';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#4C9563' : type === 'error' ? '#dc3545' : '#007bff'};
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 10000;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Close profile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const profileSection = document.getElementById('profileSection');
+            const profileMenu = document.getElementById('profileMenu');
+            
+            if (profileSection && !profileSection.contains(event.target)) {
+                profileMenu.style.display = 'none';
+            }
+        });
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>

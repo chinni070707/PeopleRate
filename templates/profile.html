@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - PeopleRate</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .profile-container {
+            max-width: 1200px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+
+        .profile-header {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .profile-photo-large {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #4C9563;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: #191919;
+            margin-bottom: 5px;
+        }
+
+        .profile-username {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .profile-email {
+            font-size: 16px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #4C9563;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4C9563;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3d7a4f;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #191919;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        .profile-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #191919;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: #191919;
+        }
+
+        .edit-form {
+            display: none;
+        }
+
+        .edit-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #191919;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4C9563;
+        }
+
+        .recent-activity {
+            margin-top: 20px;
+        }
+
+        .activity-item {
+            padding: 15px;
+            border-left: 3px solid #4C9563;
+            background: #f9f9f9;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .activity-date {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .activity-text {
+            font-size: 14px;
+            color: #191919;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #4C9563;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            color: #3d7a4f;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="/" style="text-decoration: none; color: inherit;">
+                    <h2>🌟 PeopleRate</h2>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/my-reviews" class="nav-link">My Reviews</a>
+                
+                <div id="profileSection" class="profile-section" style="display: none;">
+                    <div class="profile-dropdown">
+                        <button class="profile-button" onclick="toggleProfileMenu()">
+                            <img id="profilePhoto" class="profile-photo" src="/static/default-avatar.png" alt="Profile">
+                            <span id="profileUsername" class="profile-username">User</span>
+                            <span class="profile-arrow">▼</span>
+                        </button>
+                        <div id="profileMenu" class="profile-menu">
+                            <div class="profile-menu-header">
+                                <img id="profileMenuPhoto" class="profile-menu-photo" src="/static/default-avatar.png" alt="Profile">
+                                <div class="profile-menu-info">
+                                    <div id="profileMenuUsername" class="profile-menu-username">@username</div>
+                                    <div id="profileMenuEmail" class="profile-menu-email">user@email.com</div>
+                                </div>
+                            </div>
+                            <div class="profile-menu-items">
+                                <a href="/profile" class="profile-menu-item">
+                                    👤 View Profile
+                                </a>
+                                <a href="/my-reviews" class="profile-menu-item">
+                                    ⭐ My Reviews
+                                </a>
+                                <hr class="profile-menu-divider">
+                                <a href="#" class="profile-menu-item logout-item" onclick="logout()">
+                                    🚪 Log Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="/auth" id="loginButton" class="nav-cta">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="profile-container" id="profileContainer">
+        <div class="loading" id="loadingMessage">Loading profile...</div>
+        
+        <div id="profileContent" style="display: none;">
+            <a href="/" class="back-link">← Back to Home</a>
+            
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <img id="profilePhotoLarge" class="profile-photo-large" src="/static/default-avatar.png" alt="Profile Photo">
+                <div class="profile-info">
+                    <h1 class="profile-name" id="profileName">Loading...</h1>
+                    <div class="profile-username" id="profileUsernameDisplay">@username</div>
+                    <div class="profile-email" id="profileEmailDisplay">email@example.com</div>
+                    
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="reviewCount">0</div>
+                            <div class="stat-label">Reviews Written</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="reputationScore">0</div>
+                            <div class="stat-label">Reputation Score</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="memberSince">2024</div>
+                            <div class="stat-label">Member Since</div>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-actions">
+                        <button class="btn btn-primary" onclick="toggleEditMode()">Edit Profile</button>
+                        <button class="btn btn-secondary" onclick="changeProfilePhoto()">Change Photo</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Information -->
+            <div class="profile-section">
+                <h2 class="section-title">Account Information</h2>
+                
+                <div id="infoView" class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Full Name</span>
+                        <span class="info-value" id="fullNameDisplay">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" id="emailDisplay">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Username</span>
+                        <span class="info-value" id="usernameDisplay">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Account Status</span>
+                        <span class="info-value">Active</span>
+                    </div>
+                </div>
+
+                <div id="editForm" class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" id="fullNameInput" placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="emailInput" placeholder="Enter your email" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" id="usernameInput" placeholder="Enter your username">
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+                        <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="profile-section">
+                <h2 class="section-title">Recent Activity</h2>
+                <div class="recent-activity" id="recentActivity">
+                    <div class="activity-item">
+                        <div class="activity-date">Just now</div>
+                        <div class="activity-text">Viewing profile</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let isEditMode = false;
+
+        // Check authentication on page load
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    currentUser = await response.json();
+                    loadProfile();
+                    updateNavProfile();
+                } else {
+                    localStorage.removeItem('token');
+                    window.location.href = '/auth';
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                window.location.href = '/auth';
+            }
+        }
+
+        function loadProfile() {
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
+
+            // Load profile photo
+            const savedPhoto = localStorage.getItem('profilePhoto');
+            if (savedPhoto) {
+                document.getElementById('profilePhotoLarge').src = savedPhoto;
+            }
+
+            // Load profile data
+            document.getElementById('profileName').textContent = currentUser.full_name || 'User';
+            document.getElementById('profileUsernameDisplay').textContent = `@${currentUser.username}`;
+            document.getElementById('profileEmailDisplay').textContent = currentUser.email;
+            
+            document.getElementById('fullNameDisplay').textContent = currentUser.full_name || '-';
+            document.getElementById('emailDisplay').textContent = currentUser.email;
+            document.getElementById('usernameDisplay').textContent = currentUser.username;
+            
+            document.getElementById('reviewCount').textContent = currentUser.review_count || 0;
+            document.getElementById('reputationScore').textContent = currentUser.reputation_score || 0;
+            
+            // Set member since (would need to come from backend)
+            document.getElementById('memberSince').textContent = '2024';
+
+            // Populate edit form
+            document.getElementById('fullNameInput').value = currentUser.full_name || '';
+            document.getElementById('emailInput').value = currentUser.email;
+            document.getElementById('usernameInput').value = currentUser.username;
+        }
+
+        function updateNavProfile() {
+            document.getElementById('profileSection').style.display = 'block';
+            document.getElementById('loginButton').style.display = 'none';
+            
+            document.getElementById('profileUsername').textContent = `@${currentUser.username}`;
+            document.getElementById('profileMenuUsername').textContent = `@${currentUser.username}`;
+            document.getElementById('profileMenuEmail').textContent = currentUser.email;
+            
+            const savedPhoto = localStorage.getItem('profilePhoto');
+            if (savedPhoto) {
+                document.getElementById('profilePhoto').src = savedPhoto;
+                document.getElementById('profileMenuPhoto').src = savedPhoto;
+            }
+        }
+
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            document.getElementById('infoView').style.display = isEditMode ? 'none' : 'grid';
+            document.getElementById('editForm').classList.toggle('active', isEditMode);
+        }
+
+        function cancelEdit() {
+            toggleEditMode();
+            // Reset form values
+            document.getElementById('fullNameInput').value = currentUser.full_name || '';
+            document.getElementById('usernameInput').value = currentUser.username;
+        }
+
+        async function saveProfile() {
+            const fullName = document.getElementById('fullNameInput').value;
+            const username = document.getElementById('usernameInput').value;
+
+            // TODO: Send update to backend
+            showNotification('Profile update feature coming soon!', 'info');
+            
+            // For now, just update display
+            currentUser.full_name = fullName;
+            currentUser.username = username;
+            loadProfile();
+            updateNavProfile();
+            toggleEditMode();
+        }
+
+        function changeProfilePhoto() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const photoData = event.target.result;
+                        localStorage.setItem('profilePhoto', photoData);
+                        document.getElementById('profilePhotoLarge').src = photoData;
+                        document.getElementById('profilePhoto').src = photoData;
+                        document.getElementById('profileMenuPhoto').src = photoData;
+                        showNotification('Profile photo updated!', 'success');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('profilePhoto');
+            window.location.href = '/';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#4C9563' : type === 'error' ? '#dc3545' : '#007bff'};
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 10000;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Close profile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const profileSection = document.getElementById('profileSection');
+            const profileMenu = document.getElementById('profileMenu');
+            
+            if (profileSection && !profileSection.contains(event.target)) {
+                profileMenu.style.display = 'none';
+            }
+        });
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>
