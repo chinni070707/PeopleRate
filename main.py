@@ -188,6 +188,16 @@ class PersonBase(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
+    # Bengaluru-specific fields
+    area: Optional[str] = None
+    category: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+    google_maps_url: Optional[str] = None
+    services_offered: Optional[List[str]] = []
+    languages: Optional[List[str]] = []
+    payment_modes: Optional[List[str]] = []
+    established_year: Optional[int] = None
+    # Social media
     linkedin_url: Optional[str] = None
     instagram_url: Optional[str] = None
     facebook_url: Optional[str] = None
@@ -287,7 +297,49 @@ class Review(ReviewBase):
 
 # Enhanced sample data with more realistic profiles
 def initialize_sample_data():
-    """Initialize with comprehensive sample data - 50 users for scale testing"""
+    """Initialize sample data; prefers Bengaluru-local dataset when available."""
+    seed_payload = None
+    try:
+        from scripts.bangalore_seed_data import get_bangalore_seed_data
+        seed_payload = get_bangalore_seed_data()
+    except ImportError:
+        logger.info("Bengaluru seed data not found, falling back to legacy global dataset")
+
+    if seed_payload:
+        DATABASE["users"].clear()
+        DATABASE["persons"].clear()
+        DATABASE["reviews"].clear()
+
+        for user in seed_payload.get("users", []):
+            DATABASE["users"][user["id"]] = user
+
+        reviews = seed_payload.get("reviews", [])
+        for review in reviews:
+            DATABASE["reviews"][review["id"]] = review
+
+        for person in seed_payload.get("persons", []):
+            person_id = person["id"]
+            attached_reviews = [r for r in reviews if r["person_id"] == person_id]
+            if attached_reviews:
+                total_rating = sum(r.get("rating", 0) for r in attached_reviews)
+                person["review_count"] = len(attached_reviews)
+                person["total_rating"] = total_rating
+                person["average_rating"] = round(total_rating / len(attached_reviews), 1)
+            else:
+                person.setdefault("review_count", 0)
+                person.setdefault("total_rating", 0)
+                person.setdefault("average_rating", 0.0)
+
+            DATABASE["persons"][person_id] = person
+
+        logger.info(
+            "Seeded Bengaluru dataset: %s users, %s vendors, %s reviews",
+            len(DATABASE["users"]),
+            len(DATABASE["persons"]),
+            len(DATABASE["reviews"]),
+        )
+        return
+
     from scripts.generate_50_users import generate_all_users, generate_all_persons
     
     # Add base 3 users

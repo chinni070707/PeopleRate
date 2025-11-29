@@ -57,6 +57,20 @@
             margin-bottom: 15px;
         }
 
+        .person-local-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .person-coverage {
+            font-size: 16px;
+            color: #1f4b34;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
         .rating-summary {
             display: flex;
             align-items: center;
@@ -148,6 +162,7 @@
             gap: 8px;
             font-size: 14px;
             color: #666;
+            flex-wrap: wrap;
         }
 
         .action-buttons {
@@ -590,6 +605,11 @@
                     <div class="person-details">
                         <h1 class="person-name" id="personName">Loading...</h1>
                         <div class="person-title" id="personTitle">Job Title at Company</div>
+                        <div class="person-local-row">
+                            <span class="person-category-pill" id="personCategoryBadge" style="display: none;"></span>
+                            <span class="person-area-badge" id="personAreaBadge" style="display: none;"></span>
+                        </div>
+                        <div class="person-coverage" id="personCoverage" style="display: none;"></div>
                         
                         <div class="rating-summary">
                             <div class="rating-score" id="ratingScore">0.0</div>
@@ -866,6 +886,30 @@
             document.getElementById('personAvatar').textContent = initials;
             document.getElementById('personName').textContent = person.name;
             document.getElementById('personTitle').textContent = `${person.job_title || ''} ${person.company ? 'at ' + person.company : ''}`;
+            const categoryBadge = document.getElementById('personCategoryBadge');
+            if (person.category) {
+                categoryBadge.textContent = person.category;
+                categoryBadge.style.display = 'inline-flex';
+            } else {
+                categoryBadge.style.display = 'none';
+            }
+
+            const areaBadge = document.getElementById('personAreaBadge');
+            if (person.area) {
+                areaBadge.textContent = person.area;
+                areaBadge.style.display = 'inline-flex';
+            } else {
+                areaBadge.style.display = 'none';
+            }
+
+            const coverage = document.getElementById('personCoverage');
+            const coverageParts = [person.area, person.city, person.state].filter(Boolean);
+            if (coverageParts.length) {
+                coverage.textContent = coverageParts.join(', ');
+                coverage.style.display = 'block';
+            } else {
+                coverage.style.display = 'none';
+            }
 
             // Rating
             document.getElementById('ratingScore').textContent = person.average_rating ? person.average_rating.toFixed(1) : '0.0';
@@ -897,7 +941,19 @@
             let contactHTML = '';
             if (person.email) contactHTML += `<div class="contact-item">📧 ${person.email}</div>`;
             if (person.phone) contactHTML += `<div class="contact-item">📱 ${person.phone}</div>`;
-            if (person.city) contactHTML += `<div class="contact-item">📍 ${person.city}${person.state ? ', ' + person.state : ''}</div>`;
+            if (person.whatsapp_number) {
+                const waNumber = person.whatsapp_number;
+                const cleanWa = waNumber.replace(/[^0-9]/g, '');
+                const waLink = cleanWa ? `https://wa.me/${cleanWa.startsWith('0') ? cleanWa.substring(1) : cleanWa}` : '#';
+                contactHTML += `<div class="contact-item">💬 <a href="${waLink}" target="_blank" rel="noopener">WhatsApp ${waNumber}</a></div>`;
+            }
+            const locationBits = [person.area, person.city, person.state, person.country].filter(Boolean);
+            if (locationBits.length) {
+                contactHTML += `<div class="contact-item">📍 ${locationBits.join(', ')}</div>`;
+            }
+            if (person.google_maps_url) {
+                contactHTML += `<div class="contact-item">🗺️ <a href="${person.google_maps_url}" target="_blank" rel="noopener">Open in Google Maps</a></div>`;
+            }
             
             // Social Media Links
             if (person.linkedin_url) contactHTML += `<div class="contact-item">🔗 <a href="${person.linkedin_url}" target="_blank" style="color: #0077B5; font-weight: 600;">LinkedIn</a></div>`;
@@ -941,6 +997,32 @@
                     <div class="skills-list">
                         ${person.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
                     </div>
+                </div>`;
+            }
+            if (person.services_offered && person.services_offered.length > 0) {
+                infoHTML += `<div class="info-item">
+                    <div class="info-label">Services Offered</div>
+                    <div class="skills-list">
+                        ${person.services_offered.map(service => `<span class="skill-tag">${service}</span>`).join('')}
+                    </div>
+                </div>`;
+            }
+            if (person.languages && person.languages.length > 0) {
+                infoHTML += `<div class="info-item">
+                    <div class="info-label">Languages</div>
+                    <div class="info-value">${person.languages.join(', ')}</div>
+                </div>`;
+            }
+            if (person.payment_modes && person.payment_modes.length > 0) {
+                infoHTML += `<div class="info-item">
+                    <div class="info-label">Payment Modes</div>
+                    <div class="info-value">${person.payment_modes.join(', ')}</div>
+                </div>`;
+            }
+            if (person.established_year) {
+                infoHTML += `<div class="info-item">
+                    <div class="info-label">Operating Since</div>
+                    <div class="info-value">${person.established_year}</div>
                 </div>`;
             }
             if (person.bio) {

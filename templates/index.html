@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PeopleRate - Discover, Read, and Write Reviews About People</title>
+    <title>PeopleRate Bengaluru – Trusted Local Service Reviews</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <meta name="description" content="Find and review people based on their professional and personal experiences. Read honest reviews and share your experiences.">
+    <meta name="description" content="Discover Bengaluru service providers with verified reviews – plumbers in HSR, carpenters in Koramangala, JP Nagar tiffin services, Indiranagar hardware shops, and more.">
 </head>
 <body>
     <!-- Navigation -->
@@ -102,27 +102,27 @@
             </div>
             <div class="modal-body">
                 <div class="nlp-instruction-box">
-                    <strong>💡 Just describe the person naturally!</strong>
+                    <strong>💡 Just describe the Bengaluru vendor naturally!</strong>
                     <p style="margin: 10px 0 0 0; color: #666; font-size: 0.95rem;">
-                        Example: "Sasikala who is into consulting business in Hyderabad, phone: +91-9952282170, email: sasi@email.com"
+                        Example: "Ramesh Carpentry in Koramangala 4th Block, does wardrobes and modular kitchens, WhatsApp: +91-9845123456"
                     </p>
                     <p style="margin: 5px 0 0 0; color: #666; font-size: 0.95rem;">
-                        Our AI will extract: name, job title, company, industry, location, email, phone, LinkedIn, and more!
+                        Our AI will extract: name, category, area, services, contact info, and more!
                     </p>
                 </div>
                 
                 <form id="addPersonForm" onsubmit="submitNewPersonNLP(event)">
                     <div class="form-group">
-                        <label class="form-label">Describe the person (natural language) *</label>
+                        <label class="form-label">Describe the vendor (natural language) *</label>
                         <textarea 
                             class="form-input" 
                             id="personDescription" 
                             rows="6"
-                            placeholder="Example:&#10;- 'John Smith is a senior software engineer at Google in Mountain View with 10 years experience in Python and machine learning. Email: john@gmail.com, Phone: +1-555-0123'&#10;&#10;- 'Sasikala who works in consulting business in Hyderabad, specializes in digital transformation, phone: +91-9952282170'&#10;&#10;Just write naturally - our AI understands!"
+                            placeholder="Example:&#10;- 'Ramesh Carpentry in Koramangala 4th Block, specializes in wardrobes and modular kitchens, WhatsApp: +91-9845377661'&#10;&#10;- 'Lakshmi Hardware on Indiranagar 100 Feet Road, sells paint, plumbing spares, electrical items, phone: +91-9886011223'&#10;&#10;Just write naturally - our AI understands!"
                             required
                         ></textarea>
                         <small style="color: #666; display: block; margin-top: 8px;">
-                            ✓ Include name (required) • ✓ Add job/company • ✓ Mention location • ✓ Include contact info if available
+                            ✓ Include name (required) • ✓ Add category/services • ✓ Mention area/location • ✓ Include WhatsApp/phone if available
                         </small>
                     </div>
                     
@@ -143,34 +143,43 @@
 
     <!-- Hero Section -->
     <section class="hero-section">
-        <h1>Find people you can trust</h1>
-        <p class="subtitle">Discover, read, and write reviews about professionals, colleagues, and service providers</p>
-        <a href="#search" class="hero-cta">Start Searching →</a>
+        <div class="hero-pill">Now live in Bengaluru 🇮🇳</div>
+        <h1>Find trusted Bengaluru service heroes</h1>
+        <p class="subtitle">Verified reviews for Koramangala carpenters, HSR plumbers, JP Nagar tiffin services, Indiranagar hardware stores, and more.</p>
+        <a href="#search" class="hero-cta">Explore Bengaluru Pros →</a>
     </section>
 
     <div class="main-content">
         <!-- Search Section -->
         <section id="search" class="search-section">
-            <h2>🔍 Natural Language Search</h2>
-            <p class="search-subtitle">Ask naturally - our AI understands! Try: "sasikala who is into consulting business in Hyderabad"</p>
+            <h2>🔍 Bengaluru Service Search</h2>
+            <p class="search-subtitle">Ask naturally – our AI understands locations, WhatsApp numbers, and vendor types. Try: "Koramangala carpenter for wardrobes"</p>
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="e.g., 'software engineer at Google in Seattle' or 'John Smith' or 'consultant in Bangalore'...">
+                <input type="text" id="searchInput" class="search-input" placeholder="e.g., 'plumber in HSR Layout Sector 2' or 'JP Nagar tiffin service WhatsApp'">
                 <button class="search-btn" onclick="searchPeople()">Search</button>
             </div>
             
             <div class="search-examples">
                 <small style="color: #666;">
                     <strong>Try these examples:</strong><br>
-                    • "data scientist with Python experience"<br>
-                    • "designer at Apple in Cupertino"<br>
-                    • "sasikala consulting hyderabad"<br>
-                    • "+91-9952282170" (search by phone)<br>
-                    • "john@email.com" (search by email)
+                    • "plumber in HSR Layout Sector 2"<br>
+                    • "Indus Woodcraft Koramangala carpenter"<br>
+                    • "JP Nagar vegetarian tiffin"<br>
+                    • "+91 99802 44119" (phone search)<br>
+                    • "Sri Lakshmi Hardware Indiranagar"<br>
+                    • "pet groomer Hebbal WhatsApp"
                 </small>
             </div>
             
             <!-- Search Results -->
             <div id="searchResults" class="search-results"></div>
+            <div class="local-tip-card">
+                <div>
+                    <strong>🚀 Can't find your local hero?</strong>
+                    <p>Use the "Add Person" button to invite Bengaluru vendors with their WhatsApp number. We'll generate a shareable profile instantly.</p>
+                </div>
+                <button class="btn-add-person" onclick="openAddPersonModal()">➕ Add Bengaluru Vendor</button>
+            </div>
         </section>
 
         <!-- Write Review Section (shown when logged in) -->
@@ -710,12 +719,20 @@
                 name: document.getElementById('newPersonName').value,
                 job_title: document.getElementById('newPersonTitle').value || null,
                 company: document.getElementById('newPersonCompany').value || null,
+                category: document.getElementById('newPersonCategory').value || null,
+                area: document.getElementById('newPersonArea').value || null,
+                city: document.getElementById('newPersonCity').value || 'Bengaluru',
+                state: 'Karnataka',
+                country: 'India',
                 email: document.getElementById('newPersonEmail').value || null,
                 phone: document.getElementById('newPersonPhone').value || null,
-                city: document.getElementById('newPersonCity').value || null,
+                whatsapp_number: document.getElementById('newPersonWhatsApp').value || null,
                 linkedin_url: document.getElementById('newPersonLinkedin').value || null,
-                industry: 'Other',
-                country: 'USA'
+                services_offered: document.getElementById('newPersonServices').value ? 
+                    document.getElementById('newPersonServices').value.split(',').map(s => s.trim()) : [],
+                languages: ['English', 'Kannada'],
+                payment_modes: ['UPI', 'Cash'],
+                industry: document.getElementById('newPersonCategory').value || 'Local Services'
             };
 
             try {

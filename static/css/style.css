@@ -492,6 +492,20 @@ body {
     margin-bottom: 3rem;
 }
 
+.hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+}
+
 .hero-section h1 {
     font-size: 3.5rem;
     margin-bottom: 1rem;
@@ -521,6 +535,24 @@ body {
 .hero-cta:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.local-tip-card {
+    margin-top: 2rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px dashed rgba(0, 150, 96, 0.4);
+    border-radius: 16px;
+    background: #f5fffa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.local-tip-card p {
+    margin: 0.25rem 0 0;
+    color: #2f5f46;
 }
 
 /* Search Section */
@@ -663,6 +695,39 @@ body {
     transform: translateY(-2px);
 }
 
+.person-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.person-local-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0.5rem;
+}
+
+.person-category-pill,
+.person-area-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.person-category-pill {
+    background: #fff3e0;
+    color: #c15a00;
+}
+
+.person-area-badge {
+    background: #e6f5ee;
+    color: #1e5c3d;
+}
+
 .person-header {
     display: flex;
     justify-content: space-between;
@@ -687,6 +752,30 @@ body {
     color: var(--text-light);
     margin-bottom: 1rem;
     line-height: 1.5;
+}
+
+.person-contact-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: #2a4236;
+    margin-bottom: 0.75rem;
+}
+
+.person-services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.service-chip {
+    background: #f0fdf4;
+    color: #0f5132;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
 .person-rating {

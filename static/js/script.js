@@ -57,8 +57,8 @@ function displaySearchResults(searchData = {}) {
     
     if (persons.length === 0) {
         const message = searchData.suggest_add_person
-            ? `No strong matches found for "${query}". Try refining the name or add the person below.`
-            : 'No people found. You can add them manually.';
+            ? `No strong matches found for "${query}". Refine the spot (e.g., Indiranagar, Koramangala) or add the Bengaluru vendor below.`
+            : 'No matches yet. Add your local vendor manually.';
         resultsDiv.innerHTML = `
             <div class="no-results-card">
                 <p>${message}</p>
@@ -68,20 +68,46 @@ function displaySearchResults(searchData = {}) {
         return;
     }
 
-    resultsDiv.innerHTML = persons.map(person => `
+    resultsDiv.innerHTML = persons.map(person => {
+        const name = person.name || person.full_name || 'Unnamed Vendor';
+        const rating = person.average_rating || 0;
+        const reviewCount = person.review_count || person.total_reviews || 0;
+        const reviewLabel = reviewCount === 1 ? 'review' : 'reviews';
+        const services = (person.services_offered || person.skills || [])
+            .slice(0, 3)
+            .map(service => `<span class="service-chip">${service}</span>`)
+            .join('');
+        const contactBits = [];
+        if (person.phone) contactBits.push(`📞 ${person.phone}`);
+        if (person.whatsapp_number) contactBits.push(`💬 WhatsApp ${person.whatsapp_number}`);
+
+        return `
         <div class="person-card" onclick="viewPerson('${person.id}')">
-            <div class="person-name">${person.full_name || person.name}</div>
-            <div class="person-details">
-                ${person.company ? `Company: ${person.company}` : ''}
-                ${person.city ? `City: ${person.city}` : ''}
-                ${person.job_title ? `Job: ${person.job_title}` : ''}
+            <div class="person-card-header">
+                <div>
+                    <div class="person-name">${name}</div>
+                    <div class="person-local-meta">
+                        ${person.category ? `<span class="person-category-pill">${person.category}</span>` : ''}
+                        ${person.area ? `<span class="person-area-badge">${person.area}</span>` : ''}
+                    </div>
+                    <div class="person-details">
+                        ${person.company ? `${person.company}` : ''}
+                        ${person.city ? `• ${person.city}` : ''}
+                        ${person.job_title ? `• ${person.job_title}` : ''}
+                    </div>
+                    ${contactBits.length ? `<div class="person-contact-line">${contactBits.join(' • ')}</div>` : ''}
+                    ${services ? `<div class="person-services">${services}</div>` : ''}
+                </div>
+                <div class="person-rating">
+                    <div>
+                        <span class="stars">${generateStars(rating)}</span>
+                        <div class="rating-score">${rating.toFixed(1)}</div>
+                        <div class="rating-count">${reviewCount} ${reviewLabel}</div>
+                    </div>
+                </div>
             </div>
-            <div class="person-rating">
-                <span class="stars">${generateStars(person.average_rating || 0)}</span>
-                <span>${(person.average_rating || 0).toFixed(1)} (${person.review_count || person.total_reviews || 0} reviews)</span>
-            </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
 
 // Generate star rating display
