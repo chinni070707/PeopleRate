@@ -1,22 +1,39 @@
+# Render.com Configuration for PeopleRate
+# Deploy FastAPI app with MongoDB Atlas
+
 services:
   - type: web
-    name: peopleRate
+    name: peoplerate
     env: python
-    region: oregon
-    plan: free
+    region: oregon  # Choose: oregon, frankfurt, singapore, ohio
+    plan: free  # free tier for MVP, upgrade to starter ($7/mo) for production
+    branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    
     envVars:
+      # MongoDB Configuration
+      - key: MONGODB_URL
+        sync: false  # Set manually in Render dashboard
+      - key: DATABASE_NAME
+        value: peopleRate_db
+      
+      # JWT Security
       - key: SECRET_KEY
-        generateValue: true
+        generateValue: true  # Auto-generate secure random key
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
+      
+      # Environment
       - key: ENVIRONMENT
         value: production
       - key: CORS_ORIGINS
-        value: https://peoplerate.onrender.com
+        value: https://peoplerate.onrender.com  # Update with custom domain if purchased
+      
+      # Rate Limiting
       - key: RATE_LIMIT_ENABLED
         value: true
       - key: RATE_LIMIT_DEFAULT
@@ -27,3 +44,35 @@ services:
         value: 5/hour
       - key: RATE_LIMIT_LOGIN
         value: 10/minute
+      
+      # Python Version
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      
+      # Optional: OAuth Providers (leave empty for MVP, configure for production)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_CLIENT_ID
+        sync: false
+      - key: FACEBOOK_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+    
+    # Disk storage for uploaded files (review proofs, photos)
+    disk:
+      name: peoplerate-uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1  # 1GB free tier storage
+
+# Database: Using MongoDB Atlas (Free M0 cluster)
+# No database service needed in render.yaml
+# MongoDB Atlas is managed separately at https://cloud.mongodb.com/

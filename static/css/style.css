@@ -1456,3 +1456,65 @@ textarea.form-input {
 .form-input textarea::placeholder {
     line-height: 1.6;
 }
+/* OAuth Button Styles */
+.oauth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: white;
+    color: #333;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.oauth-btn:hover {
+    background-color: #f8f8f8;
+    border-color: #ccc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.oauth-google:hover {
+    border-color: #4285F4;
+}
+
+.oauth-linkedin:hover {
+    border-color: #0077B5;
+}
+
+.oauth-facebook:hover {
+    border-color: #1877F2;
+}
+
+.oauth-github:hover {
+    border-color: #333;
+}
+
+.oauth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.oauth-divider span {
+    padding: 0 1rem;
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+}

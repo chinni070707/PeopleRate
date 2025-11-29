@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -28,6 +28,8 @@ from slowapi.errors import RateLimitExceeded
 import aiofiles
 from pathlib import Path
 from PIL import Image
+from authlib.integrations.starlette_client import OAuth
+import httpx
 import shutil
 
 # Load environment variables
@@ -65,6 +67,53 @@ app = FastAPI(
     title="PeopleRate API",
     description="Professional people review platform with privacy-first anonymous reviews and comprehensive search",
     version="2.2.0"
+)
+
+# OAuth Configuration
+oauth = OAuth()
+
+# Configure OAuth providers
+oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
+oauth.register(
+    name='linkedin',
+    client_id=os.getenv('LINKEDIN_CLIENT_ID'),
+    client_secret=os.getenv('LINKEDIN_CLIENT_SECRET'),
+    authorize_url='https://www.linkedin.com/oauth/v2/authorization',
+    authorize_params=None,
+    access_token_url='https://www.linkedin.com/oauth/v2/accessToken',
+    access_token_params=None,
+    refresh_token_url=None,
+    client_kwargs={'scope': 'r_liteprofile r_emailaddress'}
+)
+
+oauth.register(
+    name='facebook',
+    client_id=os.getenv('FACEBOOK_CLIENT_ID'),
+    client_secret=os.getenv('FACEBOOK_CLIENT_SECRET'),
+    authorize_url='https://www.facebook.com/v12.0/dialog/oauth',
+    authorize_params=None,
+    access_token_url='https://graph.facebook.com/v12.0/oauth/access_token',
+    access_token_params=None,
+    refresh_token_url=None,
+    client_kwargs={'scope': 'email public_profile'}
+)
+
+oauth.register(
+    name='github',
+    client_id=os.getenv('GITHUB_CLIENT_ID'),
+    client_secret=os.getenv('GITHUB_CLIENT_SECRET'),
+    authorize_url='https://github.com/login/oauth/authorize',
+    authorize_params=None,
+    access_token_url='https://github.com/login/oauth/access_token',
+    access_token_params=None,
+    client_kwargs={'scope': 'user:email'}
 )
 
 # Add rate limiter to app
@@ -183,7 +232,9 @@ DATABASE = {
     "persons": {},
     "reviews": {},
     "scams": {},
-    "scam_votes": {}
+    "scam_votes": {},
+    "profile_claims": {},  # Profile claiming requests
+    "oauth_accounts": {}  # OAuth linked accounts
 }
 
 # Enhanced Pydantic Models
@@ -237,6 +288,33 @@ class User(UserBase):
     email_verified: bool = False  # Email verification status
     linkedin_verified: bool = False  # LinkedIn account linked and verified
     company_verified: bool = False  # Company/organization verified
+    
+    class Config:
+        populate_by_name = True
+
+# OAuth Account Model
+class OAuthAccountBase(BaseModel):
+    provider: str = Field(..., description="OAuth provider: google, linkedin, facebook, github")
+    provider_user_id: str = Field(..., description="User ID from OAuth provider")
+    access_token: str = Field(..., description="OAuth access token")
+    refresh_token: Optional[str] = None
+    token_expires_at: Optional[datetime] = None
+    
+    @field_validator('provider')
+    @classmethod
+    def validate_provider(cls, v):
+        allowed = ['google', 'linkedin', 'facebook', 'github']
+        if v.lower() not in allowed:
+            raise ValueError(f'Provider must be one of: {", ".join(allowed)}')
+        return v.lower()
+
+class OAuthAccount(OAuthAccountBase):
+    id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
+    user_id: str = Field(..., description="ID of associated PeopleRate user")
+    email: Optional[EmailStr] = None
+    profile_data: Optional[dict] = {}  # Store additional profile info from provider
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Config:
         populate_by_name = True
@@ -329,6 +407,9 @@ class Person(PersonBase):
     review_count: int = 0
     average_rating: float = 0.0
     total_rating: int = 0
+    claimed: bool = False  # Whether profile is claimed by owner
+    claimed_by: Optional[str] = None  # User ID who claimed it
+    claimed_at: Optional[datetime] = None
     
     class Config:
         populate_by_name = True
@@ -359,6 +440,26 @@ class Review(ReviewBase):
     verified_at: Optional[datetime] = None
     helpful_count: int = 0
     reported_count: int = 0  # For moderation
+    
+    class Config:
+        populate_by_name = True
+
+# Profile Claim Models
+class ProfileClaimBase(BaseModel):
+    person_id: str
+    verification_method: str = Field(..., description="How you'll verify ownership: email, linkedin, document, other")
+    message: str = Field(..., min_length=20, max_length=500, description="Explain why you're claiming this profile")
+    verification_proof: Optional[str] = None  # File path to uploaded proof document
+
+class ProfileClaim(ProfileClaimBase):
+    id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
+    user_id: str
+    username: str  # Claimer's username for display
+    status: str = "pending"  # pending, approved, rejected
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None  # Admin username
+    admin_notes: Optional[str] = None
     
     class Config:
         populate_by_name = True
@@ -1862,6 +1963,373 @@ async def get_verification_stats(current_user: dict = Depends(get_current_user))
         stats["verification_rate"] = round((stats["verified"] / total_with_proof) * 100, 1)
     
     return stats
+
+
+# ==================== PROFILE CLAIMING ====================
+
+@app.post("/api/claims")
+@limiter.limit("5/hour")  # Prevent claim spam
+async def submit_profile_claim(
+    request: Request,
+    claim: ProfileClaimBase,
+    current_user: dict = Depends(get_current_user)
+):
+    """Submit a profile claim request"""
+    # Check if person exists
+    person = DATABASE["persons"].get(claim.person_id)
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Check if profile is already claimed
+    if person.get("claimed"):
+        raise HTTPException(status_code=400, detail="This profile has already been claimed")
+    
+    # Check if user has pending claim for this person
+    existing_claim = None
+    for c in DATABASE["profile_claims"].values():
+        if c["user_id"] == current_user["id"] and c["person_id"] == claim.person_id and c["status"] == "pending":
+            existing_claim = c
+            break
+    
+    if existing_claim:
+        raise HTTPException(status_code=400, detail="You already have a pending claim for this profile")
+    
+    # Create claim
+    claim_id = str(ObjectId())
+    claim_data = claim.dict()
+    claim_data.update({
+        "id": claim_id,
+        "user_id": current_user["id"],
+        "username": current_user["username"],
+        "status": "pending",
+        "created_at": datetime.utcnow(),
+        "reviewed_at": None,
+        "reviewed_by": None,
+        "admin_notes": None
+    })
+    
+    DATABASE["profile_claims"][claim_id] = claim_data
+    
+    logger.info(f"Profile claim submitted: {claim_id} for person {claim.person_id} by {current_user['username']}")
+    
+    return {
+        "message": "Profile claim submitted successfully. Our team will review it shortly.",
+        "claim_id": claim_id,
+        "status": "pending"
+    }
+
+
+@app.get("/api/claims/my")
+async def get_my_claims(current_user: dict = Depends(get_current_user)):
+    """Get current user's profile claims"""
+    user_claims = [
+        claim for claim in DATABASE["profile_claims"].values()
+        if claim["user_id"] == current_user["id"]
+    ]
+    
+    # Enrich with person info
+    for claim in user_claims:
+        person = DATABASE["persons"].get(claim["person_id"])
+        if person:
+            claim["person_name"] = person.get("name")
+            claim["person_company"] = person.get("company")
+    
+    return {"claims": sorted(user_claims, key=lambda x: x["created_at"], reverse=True)}
+
+
+@app.get("/api/admin/claims/pending")
+async def get_pending_claims(current_user: dict = Depends(get_current_user)):
+    """Get pending profile claims (admin only)"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    pending_claims = [
+        claim for claim in DATABASE["profile_claims"].values()
+        if claim["status"] == "pending"
+    ]
+    
+    # Enrich with person and user info
+    for claim in pending_claims:
+        person = DATABASE["persons"].get(claim["person_id"])
+        if person:
+            claim["person_name"] = person.get("name")
+            claim["person_email"] = person.get("email")
+            claim["person_company"] = person.get("company")
+        
+        user = DATABASE["users"].get(claim["user_id"])
+        if user:
+            claim["user_email"] = user.get("email")
+            claim["user_full_name"] = user.get("full_name")
+    
+    return {"claims": sorted(pending_claims, key=lambda x: x["created_at"])}
+
+
+@app.post("/api/admin/claims/{claim_id}/review")
+async def review_claim(
+    claim_id: str,
+    approved: bool = Form(...),
+    admin_notes: str = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Approve or reject a profile claim (admin only)"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    claim = DATABASE["profile_claims"].get(claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    
+    if claim["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Claim has already been reviewed")
+    
+    # Update claim status
+    claim["status"] = "approved" if approved else "rejected"
+    claim["reviewed_at"] = datetime.utcnow()
+    claim["reviewed_by"] = current_user["username"]
+    if admin_notes:
+        claim["admin_notes"] = admin_notes
+    
+    # If approved, update person record
+    if approved:
+        person = DATABASE["persons"].get(claim["person_id"])
+        if person:
+            person["claimed"] = True
+            person["claimed_by"] = claim["user_id"]
+            person["claimed_at"] = datetime.utcnow()
+            
+            logger.info(f"Profile {claim['person_id']} claimed by user {claim['user_id']}")
+    
+    logger.info(f"Claim {claim_id} {'approved' if approved else 'rejected'} by admin {current_user['username']}")
+    
+    return {
+        "message": f"Claim {'approved' if approved else 'rejected'} successfully",
+        "claim_id": claim_id,
+        "status": claim["status"]
+    }
+
+# ===================================
+# OAuth Login Endpoints
+# ===================================
+
+@app.get("/auth/oauth/{provider}")
+async def oauth_login(provider: str, request: Request):
+    """Initiate OAuth login with provider"""
+    if provider not in ['google', 'linkedin', 'facebook', 'github']:
+        raise HTTPException(status_code=400, detail=f"Provider '{provider}' not supported")
+    
+    # Check if OAuth is configured
+    client_id = os.getenv(f'{provider.upper()}_CLIENT_ID')
+    if not client_id:
+        raise HTTPException(
+            status_code=503, 
+            detail=f"{provider.capitalize()} OAuth not configured. Please contact admin."
+        )
+    
+    redirect_uri = f"{request.base_url}auth/oauth/{provider}/callback"
+    return await oauth.create_client(provider).authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/oauth/{provider}/callback")
+async def oauth_callback(provider: str, request: Request):
+    """Handle OAuth callback and create/login user"""
+    try:
+        # Get OAuth token
+        token = await oauth.create_client(provider).authorize_access_token(request)
+        
+        # Get user info from provider
+        if provider == 'google':
+            user_info = token.get('userinfo')
+            provider_user_id = user_info.get('sub')
+            email = user_info.get('email')
+            full_name = user_info.get('name', '')
+            profile_data = {
+                'picture': user_info.get('picture'),
+                'email_verified': user_info.get('email_verified', False)
+            }
+        
+        elif provider == 'linkedin':
+            # Get LinkedIn profile
+            async with httpx.AsyncClient() as client:
+                profile_response = await client.get(
+                    'https://api.linkedin.com/v2/me',
+                    headers={'Authorization': f"Bearer {token['access_token']}"}
+                )
+                profile = profile_response.json()
+                
+                email_response = await client.get(
+                    'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+                    headers={'Authorization': f"Bearer {token['access_token']}"}
+                )
+                email_data = email_response.json()
+                
+                provider_user_id = profile.get('id')
+                full_name = f"{profile.get('localizedFirstName', '')} {profile.get('localizedLastName', '')}".strip()
+                email = email_data['elements'][0]['handle~']['emailAddress'] if email_data.get('elements') else None
+                profile_data = {
+                    'linkedin_id': provider_user_id,
+                    'profile_url': f"https://linkedin.com/in/{profile.get('vanityName', '')}"
+                }
+        
+        elif provider == 'facebook':
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"https://graph.facebook.com/me?fields=id,name,email&access_token={token['access_token']}"
+                )
+                user_info = response.json()
+                
+                provider_user_id = user_info.get('id')
+                email = user_info.get('email')
+                full_name = user_info.get('name', '')
+                profile_data = {
+                    'facebook_id': provider_user_id
+                }
+        
+        elif provider == 'github':
+            async with httpx.AsyncClient() as client:
+                # Get user profile
+                profile_response = await client.get(
+                    'https://api.github.com/user',
+                    headers={'Authorization': f"token {token['access_token']}"}
+                )
+                profile = profile_response.json()
+                
+                # Get email (might be private)
+                email_response = await client.get(
+                    'https://api.github.com/user/emails',
+                    headers={'Authorization': f"token {token['access_token']}"}
+                )
+                emails = email_response.json()
+                primary_email = next((e['email'] for e in emails if e['primary']), None)
+                
+                provider_user_id = str(profile.get('id'))
+                email = primary_email
+                full_name = profile.get('name') or profile.get('login', '')
+                profile_data = {
+                    'github_username': profile.get('login'),
+                    'github_url': profile.get('html_url'),
+                    'avatar_url': profile.get('avatar_url')
+                }
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by OAuth provider")
+        
+        # Check if OAuth account exists
+        existing_oauth = None
+        for oauth_id, oauth_account in DATABASE["oauth_accounts"].items():
+            if oauth_account["provider"] == provider and oauth_account["provider_user_id"] == provider_user_id:
+                existing_oauth = oauth_account
+                break
+        
+        if existing_oauth:
+            # Update token
+            existing_oauth["access_token"] = token['access_token']
+            existing_oauth["refresh_token"] = token.get('refresh_token')
+            existing_oauth["token_expires_at"] = datetime.utcnow() + timedelta(seconds=token.get('expires_in', 3600))
+            existing_oauth["updated_at"] = datetime.utcnow()
+            
+            # Get existing user
+            user = DATABASE["users"].get(existing_oauth["user_id"])
+            
+            logger.info(f"OAuth login: {provider} user {email} logged in")
+        else:
+            # Check if user exists by email
+            existing_user = None
+            for user_id, u in DATABASE["users"].items():
+                if u["email"] == email:
+                    existing_user = u
+                    break
+            
+            if existing_user:
+                # Link OAuth to existing user
+                user = existing_user
+            else:
+                # Create new user
+                user_id = str(ObjectId())
+                username = email.split('@')[0] + str(ObjectId())[:6]  # Unique username
+                
+                user = {
+                    "id": user_id,
+                    "email": email,
+                    "full_name": full_name,
+                    "username": username,
+                    "is_active": True,
+                    "created_at": datetime.utcnow(),
+                    "review_count": 0,
+                    "reputation_score": 10,  # Bonus for OAuth signup
+                    "email_verified": True,  # OAuth emails are verified
+                    "linkedin_verified": provider == 'linkedin',
+                    "company_verified": False
+                }
+                DATABASE["users"][user_id] = user
+                logger.info(f"New user created via {provider} OAuth: {email}")
+            
+            # Create OAuth account link
+            oauth_id = str(ObjectId())
+            oauth_account = {
+                "id": oauth_id,
+                "user_id": user["id"],
+                "provider": provider,
+                "provider_user_id": provider_user_id,
+                "email": email,
+                "access_token": token['access_token'],
+                "refresh_token": token.get('refresh_token'),
+                "token_expires_at": datetime.utcnow() + timedelta(seconds=token.get('expires_in', 3600)),
+                "profile_data": profile_data,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            DATABASE["oauth_accounts"][oauth_id] = oauth_account
+            
+            logger.info(f"OAuth account linked: {provider} for user {email}")
+        
+        # Create JWT token for our app
+        access_token = create_access_token({"sub": user["email"], "user_id": user["id"]})
+        
+        # Return redirect to homepage with token
+        response = RedirectResponse(url="/?oauth=success")
+        response.set_cookie(
+            key="token",
+            value=access_token,
+            httponly=True,
+            max_age=1800,  # 30 minutes
+            samesite="lax"
+        )
+        return response
+        
+    except Exception as e:
+        logger.error(f"OAuth {provider} callback error: {str(e)}")
+        return RedirectResponse(url="/auth?error=oauth_failed")
+
+@app.get("/api/oauth/linked-accounts")
+async def get_linked_oauth_accounts(current_user: dict = Depends(get_current_user)):
+    """Get user's linked OAuth accounts"""
+    linked_accounts = []
+    
+    for oauth_id, oauth_account in DATABASE["oauth_accounts"].items():
+        if oauth_account["user_id"] == current_user["id"]:
+            linked_accounts.append({
+                "provider": oauth_account["provider"],
+                "email": oauth_account["email"],
+                "linked_at": oauth_account["created_at"]
+            })
+    
+    return {"linked_accounts": linked_accounts}
+
+@app.delete("/api/oauth/unlink/{provider}")
+async def unlink_oauth_account(provider: str, current_user: dict = Depends(get_current_user)):
+    """Unlink OAuth account from user"""
+    removed = False
+    
+    for oauth_id, oauth_account in list(DATABASE["oauth_accounts"].items()):
+        if oauth_account["user_id"] == current_user["id"] and oauth_account["provider"] == provider:
+            del DATABASE["oauth_accounts"][oauth_id]
+            removed = True
+            logger.info(f"Unlinked {provider} OAuth for user {current_user['email']}")
+            break
+    
+    if not removed:
+        raise HTTPException(status_code=404, detail=f"{provider} account not linked")
+    
+    return {"message": f"{provider.capitalize()} account unlinked successfully"}
 
 
 @app.get("/api/stats")

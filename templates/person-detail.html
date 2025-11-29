@@ -1529,36 +1529,45 @@
                 return;
             }
 
-            const reason = document.getElementById('claimReason').value;
-            const evidence = document.getElementById('claimEvidence').value.trim();
+            const verification_method = document.getElementById('claimReason').value;
+            const message = document.getElementById('claimEvidence').value.trim();
 
-            if (!reason) {
-                showNotification('Please select a reason', 'error');
+            if (!verification_method) {
+                showNotification('Please select a verification method', 'error');
+                return;
+            }
+
+            if (!message || message.length < 20) {
+                showNotification('Please provide verification details (at least 20 characters)', 'error');
                 return;
             }
 
             try {
-                const formData = new FormData();
-                formData.append('person_id', personId);
-                formData.append('reason', reason);
-                formData.append('evidence', evidence);
+                const token = localStorage.getItem('token');
+                const claimData = {
+                    person_id: personId,
+                    verification_method: verification_method,
+                    message: message
+                };
 
-                const response = await fetch('/api/claim-profile', {
+                const response = await fetch('/api/claims', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     },
-                    body: formData
+                    body: JSON.stringify(claimData)
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    showNotification('Profile claim submitted! Our team will review it shortly.', 'success');
+                    showNotification('Profile claim submitted! Our team will review it shortly. You can check the status in your profile.', 'success');
                     closeClaimModal();
                     
-                    // Hide claim button
+                    // Hide claim button and show claimed badge
                     document.getElementById('claimProfileBtn').style.display = 'none';
+                    showNotification('Claim pending approval', 'info');
                 } else {
                     showNotification(data.detail || 'Failed to submit claim', 'error');
                 }
