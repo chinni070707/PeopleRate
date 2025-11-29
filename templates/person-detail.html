@@ -95,6 +95,53 @@
             border-top: 1px solid #f0f0f0;
         }
 
+        .social-share {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .social-share-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .social-share-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            text-decoration: none;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .social-share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .share-twitter {
+            background: #1DA1F2;
+            color: white;
+        }
+
+        .share-linkedin {
+            background: #0077B5;
+            color: white;
+        }
+
+        .share-facebook {
+            background: #1877F2;
+            color: white;
+        }
+
         .contact-item {
             display: flex;
             align-items: center;
@@ -129,6 +176,37 @@
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(76, 149, 99, 0.3);
+        }
+
+        .btn-claim {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .btn-claim:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .claimed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 10px;
         }
 
         .btn-secondary {
@@ -521,9 +599,25 @@
                             </div>
                         </div>
 
+                        <div class="social-share">
+                            <span class="social-share-label">Share:</span>
+                            <a href="#" class="social-share-btn share-twitter" onclick="shareOnTwitter(event)" title="Share on Twitter">
+                                𝕏
+                            </a>
+                            <a href="#" class="social-share-btn share-linkedin" onclick="shareOnLinkedIn(event)" title="Share on LinkedIn">
+                                in
+                            </a>
+                            <a href="#" class="social-share-btn share-facebook" onclick="shareOnFacebook(event)" title="Share on Facebook">
+                                f
+                            </a>
+                        </div>
+
                         <div class="person-contact" id="personContact"></div>
 
                         <div class="action-buttons">
+                            <button class="btn btn-claim" onclick="claimProfile()" id="claimProfileBtn" style="display: none;">
+                                🔐 Claim This Profile
+                            </button>
                             <button class="btn btn-primary" onclick="openReviewModal()" id="writeReviewBtn" style="display: none;">
                                 ✍️ Write a Review
                             </button>
@@ -584,7 +678,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Your Review *</label>
-                        <textarea class="form-textarea" id="reviewComment" placeholder="Share your detailed experience..." required></textarea>
+                        <textarea class="form-textarea" id="reviewComment" placeholder="Share your detailed experience (minimum 10 characters)..." minlength="10" required></textarea>
                     </div>
 
                     <div class="form-group">
@@ -626,11 +720,80 @@
         </div>
     </div>
 
+    <!-- Flag Review Modal -->
+    <div id="flagModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Report Review</h2>
+                <button class="modal-close" onclick="closeFlagModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="flagForm" onsubmit="submitFlag(event)">
+                    <div class="form-group">
+                        <label class="form-label">Reason for reporting</label>
+                        <select id="flagReason" class="form-select" required>
+                            <option value="">Select a reason</option>
+                            <option value="spam">Spam or advertising</option>
+                            <option value="harassment">Harassment or hate speech</option>
+                            <option value="false_info">False or misleading information</option>
+                            <option value="inappropriate">Inappropriate content</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Additional details (optional)</label>
+                        <textarea id="flagDescription" class="form-textarea" rows="4" placeholder="Please provide more context..."></textarea>
+                    </div>
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary">Submit Report</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeFlagModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claim Profile Modal -->
+    <div id="claimModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeClaimModal()">&times;</span>
+            <h2>🔐 Claim This Profile</h2>
+            <p>Claiming this profile will allow you to:</p>
+            <ul style="text-align: left; margin: 20px 0; padding-left: 40px;">
+                <li>✅ Verify your identity</li>
+                <li>✅ Respond to reviews</li>
+                <li>✅ Update your professional information</li>
+                <li>✅ Get a verified badge</li>
+            </ul>
+            <form id="claimForm" onsubmit="submitClaim(event)">
+                <div class="form-group">
+                    <label for="claimReason">Why are you claiming this profile?</label>
+                    <select id="claimReason" required>
+                        <option value="">Select a reason</option>
+                        <option value="owner">I am this person</option>
+                        <option value="authorized">I represent this person</option>
+                        <option value="correction">Profile needs correction</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="claimEvidence">Verification Evidence (optional)</label>
+                    <textarea 
+                        id="claimEvidence" 
+                        placeholder="Provide LinkedIn profile, company email, or other verification details..."
+                        rows="4"
+                    ></textarea>
+                </div>
+                <button type="submit" class="btn btn-claim">Submit Claim Request</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         let currentUser = null;
         let currentPerson = null;
         let personId = null;
         let selectedRating = 0;
+        let reviewToFlag = null;
 
         // Get person ID from URL
         const urlParts = window.location.pathname.split('/');
@@ -708,17 +871,42 @@
             document.getElementById('ratingScore').textContent = person.average_rating ? person.average_rating.toFixed(1) : '0.0';
             document.getElementById('ratingCount').textContent = `${person.review_count || 0} review${person.review_count !== 1 ? 's' : ''}`;
             
-            const stars = '★'.repeat(Math.round(person.average_rating || 0)) + '☆'.repeat(5 - Math.round(person.average_rating || 0));
-            document.getElementById('ratingStars').innerHTML = stars.split('').map((s, i) => 
-                `<span class="star ${s === '☆' ? 'empty' : ''}">${s}</span>`
-            ).join('');
+            // Display stars with proper half-star support
+            const rating = person.average_rating || 0;
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = (rating % 1) >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let starsHTML = '';
+            // Full stars
+            for (let i = 0; i < fullStars; i++) {
+                starsHTML += '<span class="star filled">★</span>';
+            }
+            // Half star
+            if (hasHalfStar) {
+                starsHTML += '<span class="star half">⯨</span>';
+            }
+            // Empty stars
+            for (let i = 0; i < emptyStars; i++) {
+                starsHTML += '<span class="star empty">☆</span>';
+            }
+            
+            document.getElementById('ratingStars').innerHTML = starsHTML;
 
             // Contact info
             let contactHTML = '';
             if (person.email) contactHTML += `<div class="contact-item">📧 ${person.email}</div>`;
             if (person.phone) contactHTML += `<div class="contact-item">📱 ${person.phone}</div>`;
             if (person.city) contactHTML += `<div class="contact-item">📍 ${person.city}${person.state ? ', ' + person.state : ''}</div>`;
-            if (person.linkedin_url) contactHTML += `<div class="contact-item">🔗 <a href="${person.linkedin_url}" target="_blank">LinkedIn</a></div>`;
+            
+            // Social Media Links
+            if (person.linkedin_url) contactHTML += `<div class="contact-item">🔗 <a href="${person.linkedin_url}" target="_blank" style="color: #0077B5; font-weight: 600;">LinkedIn</a></div>`;
+            if (person.instagram_url) contactHTML += `<div class="contact-item">📸 <a href="${person.instagram_url}" target="_blank" style="color: #E4405F; font-weight: 600;">Instagram</a></div>`;
+            if (person.facebook_url) contactHTML += `<div class="contact-item">📘 <a href="${person.facebook_url}" target="_blank" style="color: #1877F2; font-weight: 600;">Facebook</a></div>`;
+            if (person.twitter_url) contactHTML += `<div class="contact-item">🐦 <a href="${person.twitter_url}" target="_blank" style="color: #1DA1F2; font-weight: 600;">Twitter</a></div>`;
+            if (person.github_url) contactHTML += `<div class="contact-item">💻 <a href="${person.github_url}" target="_blank" style="color: #333; font-weight: 600;">GitHub</a></div>`;
+            if (person.website_url) contactHTML += `<div class="contact-item">🌐 <a href="${person.website_url}" target="_blank" style="color: #4C9563; font-weight: 600;">Website</a></div>`;
+            
             document.getElementById('personContact').innerHTML = contactHTML;
 
             // Professional info
@@ -803,6 +991,11 @@
                         ${review.communication ? `<span class="review-tag">Communication: ${review.communication}/5</span>` : ''}
                         ${review.would_recommend ? '<span class="review-tag">✅ Recommends</span>' : ''}
                     </div>
+                    <div class="review-actions" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0; display: flex; gap: 15px;">
+                        <button onclick="openFlagModal('${review.id}')" style="background: none; border: none; color: #999; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                            🚩 Report
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -847,11 +1040,25 @@
                 return;
             }
 
+            // Validate rating is selected
+            const rating = parseInt(document.getElementById('ratingValue').value);
+            if (!rating || rating < 1 || rating > 5) {
+                showNotification('Please select a rating (1-5 stars)', 'error');
+                return;
+            }
+
+            // Validate comment length
+            const comment = document.getElementById('reviewComment').value.trim();
+            if (comment.length < 10) {
+                showNotification('Review comment must be at least 10 characters', 'error');
+                return;
+            }
+
             const reviewData = {
                 person_id: personId,
-                rating: parseInt(document.getElementById('ratingValue').value),
-                title: document.getElementById('reviewTitle').value,
-                comment: document.getElementById('reviewComment').value,
+                rating: rating,
+                title: document.getElementById('reviewTitle').value.trim(),
+                comment: comment,
                 relationship: document.getElementById('reviewRelationship').value,
                 work_quality: document.getElementById('workQuality').value ? parseInt(document.getElementById('workQuality').value) : null,
                 communication: document.getElementById('communication').value ? parseInt(document.getElementById('communication').value) : null,
@@ -878,11 +1085,13 @@
                     }, 1000);
                 } else {
                     const error = await response.json();
-                    showNotification(error.detail || 'Failed to submit review', 'error');
+                    const errorMessage = typeof error === 'string' ? error : (error.detail || error.message || 'Failed to submit review');
+                    showNotification(errorMessage, 'error');
                 }
             } catch (error) {
                 console.error('Error submitting review:', error);
-                showNotification('Error submitting review', 'error');
+                const errorMessage = error.message || 'Error submitting review';
+                showNotification(errorMessage, 'error');
             }
         }
 
@@ -919,6 +1128,71 @@
             }, 3000);
         }
 
+        function openFlagModal(reviewId) {
+            if (!currentUser) {
+                showNotification('Please log in to report reviews', 'error');
+                setTimeout(() => {
+                    window.location.href = '/auth';
+                }, 1500);
+                return;
+            }
+            reviewToFlag = reviewId;
+            document.getElementById('flagModal').classList.add('active');
+        }
+
+        function closeFlagModal() {
+            document.getElementById('flagModal').classList.remove('active');
+            document.getElementById('flagForm').reset();
+            reviewToFlag = null;
+        }
+
+        async function submitFlag(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            const reason = document.getElementById('flagReason').value;
+            const description = document.getElementById('flagDescription').value.trim();
+
+            if (!reason) {
+                showNotification('Please select a reason', 'error');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const params = new URLSearchParams({
+                    review_id: reviewToFlag,
+                    reason: reason
+                });
+                if (description) {
+                    params.append('description', description);
+                }
+
+                const response = await fetch(`/api/flag-review?${params}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('Review reported successfully. Our team will review it.', 'success');
+                    closeFlagModal();
+                } else {
+                    showNotification(data.detail || 'Failed to report review', 'error');
+                }
+            } catch (error) {
+                console.error('Error reporting review:', error);
+                showNotification('Error submitting report', 'error');
+            }
+        }
+
         // Close modals and dropdowns when clicking outside
         document.addEventListener('click', function(event) {
             const profileSection = document.getElementById('profileSection');
@@ -928,15 +1202,102 @@
                 profileMenu.style.display = 'none';
             }
 
-            const modal = document.getElementById('reviewModal');
-            if (event.target === modal) {
+            const reviewModal = document.getElementById('reviewModal');
+            if (event.target === reviewModal) {
                 closeReviewModal();
+            }
+
+            const flagModal = document.getElementById('flagModal');
+            if (event.target === flagModal) {
+                closeFlagModal();
             }
         });
 
         // Initialize
         checkAuth();
         loadPersonDetails();
+
+        // Social sharing functions
+        function shareOnTwitter(event) {
+            event.preventDefault();
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent(`Check out ${currentPerson?.name || 'this profile'} on PeopleRate`);
+            window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank', 'width=600,height=400');
+        }
+
+        function shareOnLinkedIn(event) {
+            event.preventDefault();
+            const url = encodeURIComponent(window.location.href);
+            window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
+        }
+
+        function shareOnFacebook(event) {
+            event.preventDefault();
+            const url = encodeURIComponent(window.location.href);
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
+        }
+
+        // Profile claiming functions
+        function claimProfile() {
+            if (!currentUser) {
+                window.location.href = '/auth';
+                return;
+            }
+            document.getElementById('claimModal').classList.add('active');
+        }
+
+        function closeClaimModal() {
+            document.getElementById('claimModal').classList.remove('active');
+            document.getElementById('claimForm').reset();
+        }
+
+        async function submitClaim(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            const reason = document.getElementById('claimReason').value;
+            const evidence = document.getElementById('claimEvidence').value.trim();
+
+            if (!reason) {
+                showNotification('Please select a reason', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('person_id', personId);
+                formData.append('reason', reason);
+                formData.append('evidence', evidence);
+
+                const response = await fetch('/api/claim-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('Profile claim submitted! Our team will review it shortly.', 'success');
+                    closeClaimModal();
+                    
+                    // Hide claim button
+                    document.getElementById('claimProfileBtn').style.display = 'none';
+                } else {
+                    showNotification(data.detail || 'Failed to submit claim', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting claim:', error);
+                showNotification('Failed to submit claim request', 'error');
+            }
+        }
     </script>
 </body>
 </html>
+

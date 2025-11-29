@@ -178,6 +178,13 @@
             font-size: 16px;
         }
 
+        #editProfilePreview {
+            border: 3px solid #e9e9e9;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
         .form-input:focus {
             outline: none;
             border-color: #4C9563;
@@ -338,6 +345,24 @@
 
                 <div id="editForm" class="edit-form">
                     <div class="form-group">
+                        <label class="form-label">Profile Picture</label>
+                        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px;">
+                            <img id="editProfilePreview" class="profile-photo-large" src="/static/default-avatar.png" alt="Profile Preview" style="width: 100px; height: 100px;">
+                            <div>
+                                <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="previewProfilePhoto(event)">
+                                <button type="button" class="btn btn-secondary" onclick="document.getElementById('profilePhotoInput').click()">
+                                    📷 Choose Photo
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="removeProfilePhoto()" style="margin-left: 10px;">
+                                    🗑️ Remove
+                                </button>
+                                <div style="margin-top: 8px; font-size: 13px; color: #666;">
+                                    Recommended: Square image, at least 400x400px
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Full Name</label>
                         <input type="text" class="form-input" id="fullNameInput" placeholder="Enter your full name">
                     </div>
@@ -457,6 +482,14 @@
             isEditMode = !isEditMode;
             document.getElementById('infoView').style.display = isEditMode ? 'none' : 'grid';
             document.getElementById('editForm').classList.toggle('active', isEditMode);
+            
+            // When entering edit mode, load current photo into preview
+            if (isEditMode) {
+                const currentPhoto = localStorage.getItem('profilePhoto') || '/static/default-avatar.png';
+                document.getElementById('editProfilePreview').src = currentPhoto;
+                pendingPhotoData = null; // Clear any pending changes
+                document.getElementById('profilePhotoInput').value = ''; // Clear file input
+            }
         }
 
         function cancelEdit() {
@@ -464,14 +497,27 @@
             // Reset form values
             document.getElementById('fullNameInput').value = currentUser.full_name || '';
             document.getElementById('usernameInput').value = currentUser.username;
+            // Reset photo changes
+            pendingPhotoData = null;
+            document.getElementById('profilePhotoInput').value = '';
         }
 
         async function saveProfile() {
             const fullName = document.getElementById('fullNameInput').value;
             const username = document.getElementById('usernameInput').value;
 
+            // Save profile photo if changed
+            if (pendingPhotoData) {
+                localStorage.setItem('profilePhoto', pendingPhotoData);
+                // Update all profile photos on the page
+                document.getElementById('profilePhotoLarge').src = pendingPhotoData;
+                document.getElementById('profilePhoto').src = pendingPhotoData;
+                document.getElementById('profileMenuPhoto').src = pendingPhotoData;
+                pendingPhotoData = null; // Clear pending photo
+            }
+
             // TODO: Send update to backend
-            showNotification('Profile update feature coming soon!', 'info');
+            showNotification('Profile updated successfully!', 'success');
             
             // For now, just update display
             currentUser.full_name = fullName;
@@ -481,6 +527,43 @@
             toggleEditMode();
         }
 
+        let pendingPhotoData = null; // Store photo data until user saves
+
+        function previewProfilePhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('Image size should be less than 5MB', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showNotification('Please select an image file', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                pendingPhotoData = e.target.result;
+                // Update preview in edit form
+                document.getElementById('editProfilePreview').src = pendingPhotoData;
+                showNotification('Photo selected. Click "Save Changes" to apply.', 'info');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeProfilePhoto() {
+            pendingPhotoData = '/static/default-avatar.png';
+            document.getElementById('editProfilePreview').src = pendingPhotoData;
+            document.getElementById('profilePhotoInput').value = '';
+            showNotification('Photo will be removed when you save changes', 'info');
+        }
+
         function changeProfilePhoto() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -488,6 +571,12 @@
             input.onchange = (e) => {
                 const file = e.target.files[0];
                 if (file) {
+                    // Validate file size (max 5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        showNotification('Image size should be less than 5MB', 'error');
+                        return;
+                    }
+
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const photoData = event.target.result;

@@ -93,6 +93,54 @@
         </div>
     </div>
 
+    <!-- Add Person Modal -->
+    <div id="addPersonModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✨ Add New Person - Natural Language</h3>
+                <button class="modal-close" onclick="closeAddPersonModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="nlp-instruction-box">
+                    <strong>💡 Just describe the person naturally!</strong>
+                    <p style="margin: 10px 0 0 0; color: #666; font-size: 0.95rem;">
+                        Example: "Sasikala who is into consulting business in Hyderabad, phone: +91-9952282170, email: sasi@email.com"
+                    </p>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.95rem;">
+                        Our AI will extract: name, job title, company, industry, location, email, phone, LinkedIn, and more!
+                    </p>
+                </div>
+                
+                <form id="addPersonForm" onsubmit="submitNewPersonNLP(event)">
+                    <div class="form-group">
+                        <label class="form-label">Describe the person (natural language) *</label>
+                        <textarea 
+                            class="form-input" 
+                            id="personDescription" 
+                            rows="6"
+                            placeholder="Example:&#10;- 'John Smith is a senior software engineer at Google in Mountain View with 10 years experience in Python and machine learning. Email: john@gmail.com, Phone: +1-555-0123'&#10;&#10;- 'Sasikala who works in consulting business in Hyderabad, specializes in digital transformation, phone: +91-9952282170'&#10;&#10;Just write naturally - our AI understands!"
+                            required
+                        ></textarea>
+                        <small style="color: #666; display: block; margin-top: 8px;">
+                            ✓ Include name (required) • ✓ Add job/company • ✓ Mention location • ✓ Include contact info if available
+                        </small>
+                    </div>
+                    
+                    <div id="nlpPreview" class="nlp-preview-box" style="display: none;">
+                        <strong>🔍 AI Detected:</strong>
+                        <div id="nlpPreviewContent" class="nlp-preview-content"></div>
+                    </div>
+                    
+                    <div class="photo-upload-actions">
+                        <button type="button" class="btn-secondary" onclick="closeAddPersonModal()">Cancel</button>
+                        <button type="button" class="btn-preview" onclick="previewParsedPerson()">🔍 Preview Parsing</button>
+                        <button type="submit" class="btn-primary">Add Person & Continue</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Hero Section -->
     <section class="hero-section">
         <h1>Find people you can trust</h1>
@@ -103,10 +151,22 @@
     <div class="main-content">
         <!-- Search Section -->
         <section id="search" class="search-section">
-            <h2>What are you looking for?</h2>
+            <h2>🔍 Natural Language Search</h2>
+            <p class="search-subtitle">Ask naturally - our AI understands! Try: "sasikala who is into consulting business in Hyderabad"</p>
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search by name, company, phone number, LinkedIn, or location...">
+                <input type="text" id="searchInput" class="search-input" placeholder="e.g., 'software engineer at Google in Seattle' or 'John Smith' or 'consultant in Bangalore'...">
                 <button class="search-btn" onclick="searchPeople()">Search</button>
+            </div>
+            
+            <div class="search-examples">
+                <small style="color: #666;">
+                    <strong>Try these examples:</strong><br>
+                    • "data scientist with Python experience"<br>
+                    • "designer at Apple in Cupertino"<br>
+                    • "sasikala consulting hyderabad"<br>
+                    • "+91-9952282170" (search by phone)<br>
+                    • "john@email.com" (search by email)
+                </small>
             </div>
             
             <!-- Search Results -->
@@ -132,9 +192,14 @@
                         <strong>Selected:</strong> <span id="selectedPersonName"></span>
                     </div>
                     
-                    <button class="btn-write-review" onclick="startWritingReview()" id="writeReviewBtn" disabled>
-                        Start Writing Review →
-                    </button>
+                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                        <button class="btn-write-review" onclick="startWritingReview()" id="writeReviewBtn" disabled style="flex: 1;">
+                            Start Writing Review →
+                        </button>
+                        <button class="btn-add-person" onclick="openAddPersonModal()" style="flex: 1;">
+                            ➕ Add New Person
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -199,8 +264,8 @@
                 <ul>
                     <li><a href="#">About Us</a></li>
                     <li><a href="#">How PeopleRate Works</a></li>
-                    <li><a href="#">Contact</a></li>
-                    <li><a href="#">Blog</a></li>
+                    <li><a href="/legal/terms">Terms of Service</a></li>
+                    <li><a href="/legal/privacy">Privacy Policy</a></li>
                 </ul>
             </div>
             <div class="footer-section">
@@ -232,7 +297,7 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2025 PeopleRate, Inc. All rights reserved.</p>
+            <p>&copy; 2025 PeopleRate, Inc. All rights reserved. | <a href="/legal/terms" style="color: inherit;">Terms</a> | <a href="/legal/privacy" style="color: inherit;">Privacy</a></p>
         </div>
     </footer>
 
@@ -617,9 +682,182 @@
 
         function startWritingReview() {
             if (selectedPerson) {
-                // Store selected person and redirect to person detail page or review form
+                // Store selected person and redirect to person detail page
                 localStorage.setItem('reviewForPerson', JSON.stringify(selectedPerson));
-                window.location.href = `/api/persons/${selectedPerson.id}`;
+                window.location.href = `/person/${selectedPerson.id}`;
+            }
+        }
+
+        // Add Person Modal Functions
+        function openAddPersonModal() {
+            document.getElementById('addPersonModal').style.display = 'flex';
+        }
+
+        function closeAddPersonModal() {
+            document.getElementById('addPersonModal').style.display = 'none';
+            document.getElementById('addPersonForm').reset();
+        }
+
+        async function submitNewPerson(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            const personData = {
+                name: document.getElementById('newPersonName').value,
+                job_title: document.getElementById('newPersonTitle').value || null,
+                company: document.getElementById('newPersonCompany').value || null,
+                email: document.getElementById('newPersonEmail').value || null,
+                phone: document.getElementById('newPersonPhone').value || null,
+                city: document.getElementById('newPersonCity').value || null,
+                linkedin_url: document.getElementById('newPersonLinkedin').value || null,
+                industry: 'Other',
+                country: 'USA'
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/persons', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(personData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('Person added successfully!', 'success');
+                    closeAddPersonModal();
+                    
+                    // Redirect to the new person's page to write review
+                    setTimeout(() => {
+                        window.location.href = `/person/${result.person_id}`;
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Failed to add person', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding person:', error);
+                showNotification('Error adding person', 'error');
+            }
+        }
+
+        // NEW: Natural Language Processing for Add Person
+        async function previewParsedPerson() {
+            const description = document.getElementById('personDescription').value;
+            
+            if (!description || description.trim().length < 10) {
+                showNotification('Please enter a description of at least 10 characters', 'warning');
+                return;
+            }
+
+            try {
+                // Call the NLP parsing endpoint (we'll create a preview endpoint)
+                const token = localStorage.getItem('token');
+                const formData = new FormData();
+                formData.append('description', description);
+
+                const response = await fetch('/api/persons/nlp', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const parsed = result.parsed_data;
+                    
+                    // Display preview
+                    const previewHtml = `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            ${parsed.name ? `<div><strong>Name:</strong> ${parsed.name}</div>` : ''}
+                            ${parsed.job_title ? `<div><strong>Job Title:</strong> ${parsed.job_title}</div>` : ''}
+                            ${parsed.company ? `<div><strong>Company:</strong> ${parsed.company}</div>` : ''}
+                            ${parsed.industry ? `<div><strong>Industry:</strong> ${parsed.industry}</div>` : ''}
+                            ${parsed.city ? `<div><strong>City:</strong> ${parsed.city}</div>` : ''}
+                            ${parsed.state ? `<div><strong>State:</strong> ${parsed.state}</div>` : ''}
+                            ${parsed.country ? `<div><strong>Country:</strong> ${parsed.country}</div>` : ''}
+                            ${parsed.email ? `<div><strong>Email:</strong> ${parsed.email}</div>` : ''}
+                            ${parsed.phone ? `<div><strong>Phone:</strong> ${parsed.phone}</div>` : ''}
+                            ${parsed.linkedin_url ? `<div><strong>LinkedIn:</strong> <a href="${parsed.linkedin_url}" target="_blank">Profile</a></div>` : ''}
+                            ${parsed.skills && parsed.skills.length > 0 ? `<div><strong>Skills:</strong> ${parsed.skills.join(', ')}</div>` : ''}
+                            ${parsed.experience_years ? `<div><strong>Experience:</strong> ${parsed.experience_years} years</div>` : ''}
+                        </div>
+                    `;
+                    
+                    document.getElementById('nlpPreviewContent').innerHTML = previewHtml;
+                    document.getElementById('nlpPreview').style.display = 'block';
+                    
+                    showNotification('✅ AI successfully parsed the description!', 'success');
+                    
+                    // Auto-close the created person (API creates it)
+                    setTimeout(() => {
+                        closeAddPersonModal();
+                        window.location.href = `/person/${result.person_id}`;
+                    }, 2000);
+                    
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Failed to parse description', 'error');
+                }
+            } catch (error) {
+                console.error('Error parsing description:', error);
+                showNotification('Error parsing description', 'error');
+            }
+        }
+
+        async function submitNewPersonNLP(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            const description = document.getElementById('personDescription').value;
+
+            if (!description || description.trim().length < 10) {
+                showNotification('Please enter a description of at least 10 characters', 'warning');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const formData = new FormData();
+                formData.append('description', description);
+
+                const response = await fetch('/api/persons/nlp', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('✨ Person added successfully using AI!', 'success');
+                    closeAddPersonModal();
+                    
+                    // Redirect to the new person's page to write review
+                    setTimeout(() => {
+                        window.location.href = `/person/${result.person_id}`;
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Failed to add person', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding person:', error);
+                showNotification('Error adding person', 'error');
             }
         }
 

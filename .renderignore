@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+screenshots/
+tests/
+test_browser.py
+*.md
+.git/
+.gitignore
+verification_emails/
+tokens.json

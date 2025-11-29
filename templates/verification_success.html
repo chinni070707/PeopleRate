@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified - PeopleRate</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .success-container {
+            max-width: 600px;
+            margin: 100px auto;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        .success-title {
+            font-size: 32px;
+            font-weight: 600;
+            color: #191919;
+            margin: 20px 0 10px;
+        }
+        .success-message {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #00b67a 0%, #005128 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        .success-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            text-decoration: none;
+            background: linear-gradient(135deg, #00b67a 0%, #005128 100%);
+            color: white;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .success-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 182, 122, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✅</div>
+        <h1 class="success-title">Email Verified!</h1>
+        
+        <div class="verified-badge">
+            <span>✓</span>
+            <span>Email Verified</span>
+        </div>
+        
+        <p class="success-message">
+            Welcome, <strong>{{ username }}</strong>! Your email has been successfully verified.
+            You can now enjoy full access to PeopleRate features.
+        </p>
+        
+        <a href="/" class="success-btn">Go to Homepage</a>
+    </div>
+</body>
+</html>

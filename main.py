@@ -18,10 +18,43 @@ import re
 import uvicorn
 from bson import ObjectId
 import logging
+from nlp_processor import nlp_processor
+import os
+from dotenv import load_dotenv
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+# Load environment variables
+load_dotenv()
+
+# Import moderation system
+from moderation import contains_profanity, filter_profanity, analyze_content, should_auto_flag
+
+# Import email service
+from email_service import send_verification_email, verify_token, send_password_reset_email
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
+# Try to import MongoDB models and utilities
+USE_MONGODB = False
+try:
+    from app.utils.database import connect_to_mongo, close_mongo_connection, init_sample_data, get_database_stats
+    from app.models.mongodb_models import User as UserModel, Person as PersonModel, Review as ReviewModel
+    USE_MONGODB = bool(os.getenv("MONGODB_URL") and "<username>" not in os.getenv("MONGODB_URL", ""))
+    if USE_MONGODB:
+        logger.info("✅ MongoDB integration enabled - data will persist")
+    else:
+        logger.warning("⚠️ MongoDB not configured - using in-memory mode (data will reset on restart)")
+        logger.warning("💡 To enable MongoDB: Configure MONGODB_URL in .env file")
+except ImportError:
+    logger.warning("⚠️ MongoDB models not found - using in-memory mode")
+    USE_MONGODB = False
 
 app = FastAPI(
     title="PeopleRate API",
@@ -29,14 +62,52 @@ app = FastAPI(
     version="2.2.0"
 )
 
-# CORS middleware
+# Add rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Custom error handlers
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    """Custom 404 error page"""
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc: Exception):
+    """Custom 500 error page"""
+    logger.error(f"Internal server error: {exc}")
+    return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+
+# Startup event - required for proper async lifecycle
+@app.on_event("startup")
+async def startup_event():
+    """Async startup handler"""
+    logger.info("✅ Server startup complete - ready to handle requests")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Async shutdown handler"""
+    logger.info("👋 Server shutting down")
+
+# CORS middleware - restrict in production
+allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("ENVIRONMENT") == "production" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # Static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -44,8 +115,9 @@ templates = Jinja2Templates(directory="templates")
 
 # Security
 security = HTTPBearer()
-JWT_SECRET = "your-enhanced-secret-key-here"
-JWT_ALGORITHM = "HS256"
+JWT_SECRET = os.getenv("SECRET_KEY", "your-enhanced-secret-key-here")
+JWT_ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # In-memory database with enhanced sample data
 DATABASE = {
@@ -117,6 +189,11 @@ class PersonBase(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
     linkedin_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+    github_url: Optional[str] = None
+    website_url: Optional[str] = None
     bio: Optional[str] = None
     skills: Optional[List[str]] = []
     experience_years: Optional[int] = None
@@ -126,8 +203,43 @@ class PersonBase(BaseModel):
     @field_validator('linkedin_url')
     @classmethod
     def validate_linkedin_url(cls, v):
-        if v and not re.match(r'^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$', v):
+        if v and v.strip() and not re.match(r'^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$', v):
             raise ValueError('Invalid LinkedIn URL format')
+        return v
+    
+    @field_validator('instagram_url')
+    @classmethod
+    def validate_instagram_url(cls, v):
+        if v and v.strip() and not re.match(r'^https?://(www\.)?instagram\.com/[\w\.\-]+/?$', v):
+            raise ValueError('Invalid Instagram URL format')
+        return v
+    
+    @field_validator('facebook_url')
+    @classmethod
+    def validate_facebook_url(cls, v):
+        if v and v.strip() and not re.match(r'^https?://(www\.)?facebook\.com/[\w\.\-]+/?$', v):
+            raise ValueError('Invalid Facebook URL format')
+        return v
+    
+    @field_validator('twitter_url')
+    @classmethod
+    def validate_twitter_url(cls, v):
+        if v and v.strip() and not re.match(r'^https?://(www\.)?(twitter|x)\.com/[\w]+/?$', v):
+            raise ValueError('Invalid Twitter/X URL format')
+        return v
+    
+    @field_validator('github_url')
+    @classmethod
+    def validate_github_url(cls, v):
+        if v and v.strip() and not re.match(r'^https?://(www\.)?github\.com/[\w\-]+/?$', v):
+            raise ValueError('Invalid GitHub URL format')
+        return v
+    
+    @field_validator('website_url')
+    @classmethod
+    def validate_website_url(cls, v):
+        if v and v.strip() and not re.match(r'^https?://[\w\-\.]+\.[a-z]{2,}(/.*)?$', v):
+            raise ValueError('Invalid website URL format')
         return v
     
     @field_validator('phone')
@@ -175,9 +287,10 @@ class Review(ReviewBase):
 
 # Enhanced sample data with more realistic profiles
 def initialize_sample_data():
-    """Initialize with comprehensive sample data"""
+    """Initialize with comprehensive sample data - 50 users for scale testing"""
+    from scripts.generate_50_users import generate_all_users, generate_all_persons
     
-    # Sample users with usernames
+    # Add base 3 users
     users_data = [
         {
             "id": "user1",
@@ -213,6 +326,13 @@ def initialize_sample_data():
             "reputation_score": 78
         }
     ]
+    
+    # Add generated diverse users
+    generated_users = generate_all_users()
+    users_data.extend(generated_users)
+    
+    for user in users_data:
+        DATABASE["users"][user["id"]] = user
     
     # Sample persons with detailed profiles
     persons_data = [
@@ -366,6 +486,9 @@ def initialize_sample_data():
             "state": "Tamil Nadu",
             "country": "India",
             "linkedin_url": "https://linkedin.com/in/sasikala-chennai",
+            "instagram_url": "https://instagram.com/sasikala.dev",
+            "twitter_url": "https://twitter.com/sasikala_tech",
+            "github_url": "https://github.com/sasikala-chennai",
             "bio": "Experienced software developer with expertise in full-stack development and cloud technologies.",
             "skills": ["Python", "JavaScript", "React", "Node.js", "AWS"],
             "experience_years": 5,
@@ -435,6 +558,9 @@ def initialize_sample_data():
             "state": "CA",
             "country": "USA",
             "linkedin_url": "https://linkedin.com/in/sasikala-sanjose",
+            "facebook_url": "https://facebook.com/sasikala.engineer",
+            "github_url": "https://github.com/sasikala-sj",
+            "website_url": "https://sasikala.dev",
             "bio": "Senior engineer with extensive experience in distributed systems and microservices architecture.",
             "skills": ["Java", "Kubernetes", "Docker", "Microservices", "System Design"],
             "experience_years": 8,
@@ -447,6 +573,10 @@ def initialize_sample_data():
             "total_rating": 0
         }
     ]
+    
+    # Add generated diverse persons
+    generated_persons = generate_all_persons()
+    persons_data.extend(generated_persons)
     
     # Sample reviews with usernames only (privacy protected)
     reviews_data = [
@@ -602,15 +732,12 @@ def initialize_sample_data():
     for review in reviews_data:
         DATABASE["reviews"][review["id"]] = review
 
-# Startup event to initialize sample data
-@app.on_event("startup")
-async def startup_event():
-    """Initialize sample data when the application starts"""
-    initialize_sample_data()
-    print("✅ Sample data initialized successfully")
-    print(f"   📊 {len(DATABASE['users'])} users ready")
-    print(f"   👥 {len(DATABASE['persons'])} persons loaded")
-    print(f"   ⭐ {len(DATABASE['reviews'])} reviews available")
+# INITIALIZE DATABASE IMMEDIATELY ON MODULE LOAD
+logger.info("🚀 PeopleRate starting up...")
+logger.info("🔧 Initializing in-memory database...")
+initialize_sample_data()
+logger.info(f"✅ Database ready: {len(DATABASE['users'])} users, {len(DATABASE['persons'])} persons, {len(DATABASE['reviews'])} reviews")
+logger.info("🌐 Server is ready to accept connections on http://localhost:8080")
 
 # Helper functions
 def create_jwt_token(data: dict) -> str:
@@ -711,6 +838,7 @@ def search_persons_enhanced(query: str, limit: int = 10) -> List[Dict]:
 # API Routes
 @app.get("/")
 async def home(request: Request):
+    logger.info(f"📥 Homepage request from {request.client.host}")
     """Home page with professional design"""
     return templates.TemplateResponse("index.html", {"request": request})
 
@@ -734,8 +862,24 @@ async def person_detail_page(request: Request, person_id: str):
     """Person detail page"""
     return templates.TemplateResponse("person-detail.html", {"request": request})
 
+@app.get("/legal/terms")
+async def terms_page(request: Request):
+    """Terms of Service page"""
+    return templates.TemplateResponse("terms.html", {"request": request})
+
+@app.get("/legal/privacy")
+async def privacy_page(request: Request):
+    """Privacy Policy page"""
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+@app.get("/moderation")
+async def moderation_page(request: Request):
+    """Moderation Guidelines page"""
+    return templates.TemplateResponse("moderation.html", {"request": request})
+
 @app.post("/api/auth/register")
-async def register_user(user: UserCreate):
+@limiter.limit("5/hour")  # Prevent spam registration
+async def register_user(request: Request, user: UserCreate):
     """Register a new user with username for anonymous reviews"""
     # Check if email exists
     for existing_user in DATABASE["users"].values():
@@ -761,10 +905,19 @@ async def register_user(user: UserCreate):
         "is_active": user.is_active,
         "created_at": datetime.utcnow(),
         "review_count": 0,
-        "reputation_score": 0
+        "reputation_score": 0,
+        "email_verified": False
     }
     
     DATABASE["users"][user_id] = user_data
+    
+    # Send verification email (MVP: file-based)
+    try:
+        base_url = str(request.base_url).rstrip('/')
+        send_verification_email(user.email, user_id, user.username, base_url)
+        logger.info(f"📧 Verification email sent for user: {user.username}")
+    except Exception as e:
+        logger.error(f"Failed to send verification email: {e}")
     
     # Create JWT token
     token = create_jwt_token({"sub": user_id, "email": user.email, "username": user.username})
@@ -782,7 +935,8 @@ async def register_user(user: UserCreate):
     }
 
 @app.post("/api/auth/login")
-async def login_user(email: str = Form(...), password: str = Form(...)):
+@limiter.limit("10/minute")  # Prevent brute force attacks
+async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     """Login user"""
     # Find user
     user = None
@@ -829,14 +983,32 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 
 @app.get("/api/persons/search")
 async def search_persons(
-    q: str = Query("", description="Search query"),
+    q: str = Query("", description="Natural language search query"),
     limit: int = Query(10, le=50, description="Maximum number of results")
 ):
-    """Enhanced search for persons with pattern recognition"""
+    """Natural language search for persons - understands queries like 'sasikala who is into consulting business in Hyderabad'"""
     try:
-        persons = search_persons_enhanced(q, limit)
+        # Parse natural language query
+        parsed_query = nlp_processor.parse_search_query(q)
+        logger.info(f"Parsed query: {parsed_query}")
+        
+        # Get all persons and score them
+        results = []
+        for person in DATABASE["persons"].values():
+            score = nlp_processor.generate_search_score(person, parsed_query)
+            # Only include results with meaningful matches (score >= 30)
+            # This filters out weak/random matches
+            if score >= 30:
+                results.append((person, score))
+                logger.info(f"Match found: {person.get('name')} with score {score}")
+        
+        # Sort by score
+        results.sort(key=lambda x: x[1], reverse=True)
+        persons = [person for person, score in results[:limit]]
+        
         return {
             "query": q,
+            "parsed": parsed_query,
             "count": len(persons),
             "persons": persons
         }
@@ -861,6 +1033,70 @@ async def create_person(person: PersonBase, current_user: dict = Depends(get_cur
     DATABASE["persons"][person_id] = person_data
     return {"message": "Person created successfully", "person_id": person_id}
 
+@app.post("/api/persons/nlp")
+async def create_person_from_text(
+    description: str = Form(..., description="Natural language description of the person"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Create a new person from natural language description
+    
+    Example: "John Smith is a senior software engineer at Google in Mountain View 
+              with 10 years experience in Python and machine learning. 
+              Email: john@gmail.com, Phone: +1-555-0123"
+    """
+    try:
+        # Parse natural language description
+        parsed_data = nlp_processor.extract_person_fields(description)
+        logger.info(f"Parsed person data: {parsed_data}")
+        
+        # Validate we have at least a name
+        if not parsed_data.get("name"):
+            raise HTTPException(
+                status_code=400, 
+                detail="Could not extract a name from the description. Please include a person's name."
+            )
+        
+        # Create person
+        person_id = str(ObjectId())
+        person_data = {
+            "id": person_id,
+            "name": parsed_data["name"],
+            "email": parsed_data.get("email"),
+            "phone": parsed_data.get("phone"),
+            "job_title": parsed_data.get("job_title"),
+            "company": parsed_data.get("company"),
+            "industry": parsed_data.get("industry"),
+            "city": parsed_data.get("city"),
+            "state": parsed_data.get("state"),
+            "country": parsed_data.get("country"),
+            "linkedin_url": parsed_data.get("linkedin_url"),
+            "bio": parsed_data.get("bio") or description,  # Use description as bio
+            "skills": parsed_data.get("skills", []),
+            "experience_years": parsed_data.get("experience_years"),
+            "education": None,
+            "certifications": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+            "review_count": 0,
+            "average_rating": 0.0,
+            "total_rating": 0
+        }
+        
+        DATABASE["persons"][person_id] = person_data
+        
+        return {
+            "message": "Person created successfully from natural language description",
+            "person_id": person_id,
+            "parsed_data": parsed_data,
+            "person": person_data
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating person from NLP: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create person: {str(e)}")
+
 @app.get("/api/persons/{person_id}")
 async def get_person(person_id: str):
     """Get person details"""
@@ -874,11 +1110,14 @@ async def get_person(person_id: str):
         if review["person_id"] == person_id
     ]
     
-    person["reviews"] = person_reviews
-    return person
+    return {
+        "person": person,
+        "reviews": person_reviews
+    }
 
 @app.post("/api/reviews")
-async def create_review(review: ReviewBase, current_user: dict = Depends(get_current_user)):
+@limiter.limit("5/hour")  # Prevent review spam
+async def create_review(request: Request, review: ReviewBase, current_user: dict = Depends(get_current_user)):
     """Create a new review (requires authentication, shows only username)"""
     # Check if person exists
     person = DATABASE["persons"].get(review.person_id)
@@ -895,6 +1134,15 @@ async def create_review(review: ReviewBase, current_user: dict = Depends(get_cur
     if existing_review:
         raise HTTPException(status_code=400, detail="You have already reviewed this person")
     
+    # Content moderation check
+    content_analysis = analyze_content(review.comment)
+    auto_flagged = should_auto_flag(review.comment)
+    
+    if content_analysis["has_profanity"]:
+        # Filter profanity automatically
+        review.comment = filter_profanity(review.comment)
+        logger.warning(f"Profanity filtered in review by {current_user['username']}")
+    
     # Create review with username only (privacy protection)
     review_id = str(ObjectId())
     review_data = review.dict()
@@ -906,7 +1154,7 @@ async def create_review(review: ReviewBase, current_user: dict = Depends(get_cur
         "updated_at": datetime.utcnow(),
         "is_verified": False,
         "helpful_count": 0,
-        "reported_count": 0
+        "reported_count": 1 if auto_flagged else 0  # Auto-flag if score is high
     })
     
     DATABASE["reviews"][review_id] = review_data
@@ -930,7 +1178,8 @@ async def create_review(review: ReviewBase, current_user: dict = Depends(get_cur
     return {
         "message": "Review created successfully", 
         "review_id": review_id,
-        "reviewer_username": current_user["username"]
+        "reviewer_username": current_user["username"],
+        "moderation_note": "Content was automatically filtered" if content_analysis["has_profanity"] else None
     }
 
 @app.get("/api/reviews/")
@@ -959,6 +1208,63 @@ async def get_reviews(
         "reviews": reviews[:limit]
     }
 
+@app.post("/api/flag-review")
+@limiter.limit("10/hour")  # Prevent flag spam
+async def flag_review(
+    request: Request,
+    review_id: str,
+    reason: str,
+    description: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Flag a review for moderation (requires authentication)"""
+    # Check if review exists
+    review = DATABASE["reviews"].get(review_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Check valid reason
+    valid_reasons = ["spam", "harassment", "false_info", "inappropriate", "other"]
+    if reason not in valid_reasons:
+        raise HTTPException(status_code=400, detail=f"Invalid reason. Must be one of: {', '.join(valid_reasons)}")
+    
+    # Create flag record
+    flag_id = str(ObjectId())
+    flag_data = {
+        "id": flag_id,
+        "review_id": review_id,
+        "flagger_id": current_user["id"],
+        "flagger_username": current_user["username"],
+        "reason": reason,
+        "description": description or "",
+        "created_at": datetime.utcnow(),
+        "status": "pending",  # pending, reviewed, resolved, dismissed
+        "reviewed_by": None,
+        "reviewed_at": None
+    }
+    
+    # Initialize flagged_reviews collection if not exists
+    if "flagged_reviews" not in DATABASE:
+        DATABASE["flagged_reviews"] = {}
+    
+    DATABASE["flagged_reviews"][flag_id] = flag_data
+    
+    # Increment reported_count on the review
+    review["reported_count"] = review.get("reported_count", 0) + 1
+    
+    # Auto-hide review if reported 3+ times
+    if review["reported_count"] >= 3:
+        review["is_hidden"] = True
+        logger.warning(f"Review {review_id} auto-hidden after {review['reported_count']} reports")
+    
+    return {
+        "message": "Review flagged successfully",
+        "flag_id": flag_id,
+        "review_reported_count": review["reported_count"],
+        "auto_hidden": review.get("is_hidden", False)
+    }
+
+
 @app.get("/api/stats")
 async def get_stats():
     """Get platform statistics"""
@@ -978,17 +1284,292 @@ async def get_stats():
         "verified_reviews": sum(1 for r in DATABASE["reviews"].values() if r.get("is_verified", False))
     }
 
-if __name__ == "__main__":
-    # Initialize sample data
-    initialize_sample_data()
+# ==================== ADMIN & MODERATION ====================
+
+# In-memory flagged content storage (move to database for production)
+FLAGGED_CONTENT = {}
+
+# Profile claim requests storage (move to database for production)
+PROFILE_CLAIMS = {}
+
+@app.get("/admin")
+async def admin_page(request: Request, current_user: dict = Depends(get_current_user)):
+    """Admin dashboard for content moderation"""
+    # Check if user is admin (simple check - enhance for production)
+    if current_user.get("username") not in ["TechReviewer2024", "ProjectManager_Pro"]:  # Demo admin users
+        raise HTTPException(status_code=403, detail="Admin access required")
     
-    print("🚀 Enhanced PeopleRate API with TrustPilot Design starting...")
-    print("📊 Sample data loaded:")
-    print(f"   - {len(DATABASE['users'])} users")
-    print(f"   - {len(DATABASE['persons'])} persons")  
-    print(f"   - {len(DATABASE['reviews'])} reviews")
-    print("🌐 Visit http://localhost:8000 to use the application")
-    print("📚 API docs available at http://localhost:8000/docs")
-    print("🎨 New TrustPilot-inspired design included!")
+    # Get statistics
+    stats = {
+        "users": len(DATABASE["users"]),
+        "persons": len(DATABASE["persons"]),
+        "reviews": len(DATABASE["reviews"])
+    }
     
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    # Get flagged reviews
+    flagged_reviews = []
+    for flag_id, flag in FLAGGED_CONTENT.items():
+        if flag.get("status") == "pending":
+            review = DATABASE["reviews"].get(flag["review_id"])
+            if review:
+                person = DATABASE["persons"].get(review["person_id"])
+                flagged_reviews.append({
+                    "flag_id": flag_id,
+                    "review_id": flag["review_id"],
+                    "reason": flag["reason"],
+                    "description": flag.get("description"),
+                    "reporter_username": flag["reporter_username"],
+                    "reviewer_username": review["reviewer_username"],
+                    "person_name": person["name"] if person else "Unknown",
+                    "rating": review["rating"],
+                    "title": review.get("title"),
+                    "comment": review["comment"],
+                    "created_at": flag["created_at"]
+                })
+    
+    # Get recent reviews
+    recent_reviews = sorted(
+        DATABASE["reviews"].values(),
+        key=lambda x: x["created_at"],
+        reverse=True
+    )[:20]
+    
+    for review in recent_reviews:
+        person = DATABASE["persons"].get(review["person_id"])
+        review["person_name"] = person["name"] if person else "Unknown"
+    
+    # Get top users
+    top_users = sorted(
+        DATABASE["users"].values(),
+        key=lambda x: x.get("review_count", 0),
+        reverse=True
+    )[:10]
+    
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "stats": stats,
+        "flagged_count": len(flagged_reviews),
+        "flagged_reviews": flagged_reviews,
+        "recent_reviews": recent_reviews,
+        "top_users": top_users
+    })
+
+@app.post("/api/admin/moderate-review/{review_id}")
+async def moderate_review(
+    review_id: str,
+    action: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Admin endpoint to approve or reject a review"""
+    # Check admin permission
+    if current_user.get("username") not in ["TechReviewer2024", "ProjectManager_Pro"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    review = DATABASE["reviews"].get(review_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    if action == "approve":
+        review["reported_count"] = 0
+        review["is_verified"] = True
+        message = "Review approved"
+    elif action == "reject":
+        # Remove the review
+        del DATABASE["reviews"][review_id]
+        # Update person stats
+        person = DATABASE["persons"].get(review["person_id"])
+        if person:
+            person["review_count"] = max(0, person.get("review_count", 1) - 1)
+            if person["review_count"] > 0:
+                remaining_reviews = [r for r in DATABASE["reviews"].values() if r["person_id"] == review["person_id"]]
+                total = sum(r["rating"] for r in remaining_reviews)
+                person["average_rating"] = total / len(remaining_reviews) if remaining_reviews else 0
+            else:
+                person["average_rating"] = 0
+        message = "Review removed"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    # Remove flags for this review
+    for flag_id in list(FLAGGED_CONTENT.keys()):
+        if FLAGGED_CONTENT[flag_id]["review_id"] == review_id:
+            FLAGGED_CONTENT[flag_id]["status"] = "resolved"
+    
+    logger.info(f"Admin {current_user['username']} {action}ed review {review_id}")
+    
+    return {"message": message}
+
+@app.post("/api/admin/moderate-flag/{flag_id}")
+async def moderate_flag(
+    flag_id: str,
+    action: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Admin endpoint to dismiss a flag"""
+    # Check admin permission
+    if current_user.get("username") not in ["TechReviewer2024", "ProjectManager_Pro"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    flag = FLAGGED_CONTENT.get(flag_id)
+    if not flag:
+        raise HTTPException(status_code=404, detail="Flag not found")
+    
+    if action == "dismiss":
+        flag["status"] = "dismissed"
+        # Reset report count on review
+        review = DATABASE["reviews"].get(flag["review_id"])
+        if review:
+            review["reported_count"] = max(0, review.get("reported_count", 1) - 1)
+        message = "Flag dismissed"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    logger.info(f"Admin {current_user['username']} dismissed flag {flag_id}")
+    
+    return {"message": message}
+
+# ==================== EMAIL VERIFICATION ====================
+
+@app.get("/verify-email")
+async def verify_email_page(request: Request, token: str):
+    """Verify user's email address"""
+    # Verify token
+    token_data = verify_token(token)
+    
+    if not token_data:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "title": "Invalid Verification Link",
+            "message": "This verification link is invalid or has expired. Please request a new one."
+        }, status_code=400)
+    
+    # Update user's email_verified status
+    user_id = token_data["user_id"]
+    user = DATABASE["users"].get(user_id)
+    
+    if user:
+        user["email_verified"] = True
+        user["verified_at"] = datetime.utcnow()
+        logger.info(f"✅ Email verified for user: {user['username']}")
+        
+        return templates.TemplateResponse("verification_success.html", {
+            "request": request,
+            "username": user["username"]
+        })
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+
+@app.post("/api/resend-verification")
+async def resend_verification(request: Request, current_user: dict = Depends(get_current_user)):
+    """Resend verification email"""
+    user = DATABASE["users"].get(current_user["id"])
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    # Send new verification email
+    try:
+        base_url = str(request.base_url).rstrip('/')
+        send_verification_email(user["email"], user["id"], user["username"], base_url)
+        logger.info(f"📧 Verification email resent for user: {user['username']}")
+        return {"message": "Verification email sent. Please check your inbox."}
+    except Exception as e:
+        logger.error(f"Failed to resend verification email: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
+
+# ==================== PROFILE CLAIMING ====================
+
+@app.post("/api/claim-profile")
+@limiter.limit("3/hour")
+async def claim_profile(
+    request: Request,
+    person_id: str = Form(...),
+    reason: str = Form(...),
+    evidence: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Submit a profile claim request"""
+    # Check if person exists
+    person = DATABASE["persons"].get(person_id)
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Check if already claimed
+    if person.get("is_claimed"):
+        raise HTTPException(status_code=400, detail="This profile has already been claimed")
+    
+    # Check if user already has pending claim
+    for claim in PROFILE_CLAIMS.values():
+        if claim["person_id"] == person_id and claim["claimer_id"] == current_user["id"] and claim["status"] == "pending":
+            raise HTTPException(status_code=400, detail="You already have a pending claim for this profile")
+    
+    # Create claim request
+    claim_id = str(ObjectId())
+    PROFILE_CLAIMS[claim_id] = {
+        "id": claim_id,
+        "person_id": person_id,
+        "person_name": person["name"],
+        "claimer_id": current_user["id"],
+        "claimer_username": current_user["username"],
+        "claimer_email": current_user["email"],
+        "reason": reason,
+        "evidence": evidence,
+        "status": "pending",  # pending, approved, rejected
+        "created_at": datetime.utcnow(),
+        "reviewed_at": None,
+        "reviewed_by": None
+    }
+    
+    logger.info(f"📋 Profile claim submitted: {person['name']} by {current_user['username']}")
+    
+    return {
+        "message": "Profile claim submitted successfully. Our team will review it within 24-48 hours.",
+        "claim_id": claim_id
+    }
+
+@app.post("/api/admin/review-claim/{claim_id}")
+async def review_claim(
+    claim_id: str,
+    action: str = Form(...),  # approve or reject
+    notes: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Admin endpoint to approve or reject profile claims"""
+    # Check admin permission
+    if current_user.get("username") not in ["TechReviewer2024", "ProjectManager_Pro"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    claim = PROFILE_CLAIMS.get(claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    
+    if claim["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Claim already reviewed")
+    
+    if action == "approve":
+        # Mark profile as claimed
+        person = DATABASE["persons"].get(claim["person_id"])
+        if person:
+            person["is_claimed"] = True
+            person["claimed_by"] = claim["claimer_id"]
+            person["claimed_at"] = datetime.utcnow()
+        
+        claim["status"] = "approved"
+        message = f"Profile claim approved for {claim['person_name']}"
+        
+    elif action == "reject":
+        claim["status"] = "rejected"
+        message = f"Profile claim rejected for {claim['person_name']}"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'approve' or 'reject'")
+    
+    claim["reviewed_at"] = datetime.utcnow()
+    claim["reviewed_by"] = current_user["username"]
+    claim["admin_notes"] = notes
+    
+    logger.info(f"Admin {current_user['username']} {action}d claim {claim_id}")
+    
+    return {"message": message}

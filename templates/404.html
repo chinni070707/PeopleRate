@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | PeopleRate</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .error-container {
+            max-width: 600px;
+            margin: 100px auto;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .error-code {
+            font-size: 120px;
+            font-weight: 700;
+            color: #00b67a;
+            margin: 0;
+            line-height: 1;
+        }
+        .error-title {
+            font-size: 32px;
+            font-weight: 600;
+            color: #191919;
+            margin: 20px 0 10px;
+        }
+        .error-message {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .error-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .error-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .error-btn-primary {
+            background: linear-gradient(135deg, #00b67a 0%, #005128 100%);
+            color: white;
+        }
+        .error-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 182, 122, 0.3);
+        }
+        .error-btn-secondary {
+            background: white;
+            color: #00b67a;
+            border: 2px solid #00b67a;
+        }
+        .error-btn-secondary:hover {
+            background: #f0f9f6;
+        }
+        .error-illustration {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-illustration">🔍</div>
+        <h1 class="error-code">404</h1>
+        <h2 class="error-title">Page Not Found</h2>
+        <p class="error-message">
+            Oops! The page you're looking for doesn't exist. It might have been moved or deleted.
+        </p>
+        <div class="error-actions">
+            <a href="/" class="error-btn error-btn-primary">Go to Homepage</a>
+            <a href="/search" class="error-btn error-btn-secondary">Search People</a>
+        </div>
+    </div>
+</body>
+</html>
