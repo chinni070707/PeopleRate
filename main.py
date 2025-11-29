@@ -234,6 +234,9 @@ class User(UserBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     review_count: int = 0
     reputation_score: int = 0  # Based on helpful reviews, verified status, etc.
+    email_verified: bool = False  # Email verification status
+    linkedin_verified: bool = False  # LinkedIn account linked and verified
+    company_verified: bool = False  # Company/organization verified
     
     class Config:
         populate_by_name = True
@@ -449,7 +452,10 @@ def initialize_sample_data():
             "review_count": 3,
             "reputation_score": 85,
             "role": "admin",  # Admin user for testing
-            "is_admin": True
+            "is_admin": True,
+            "email_verified": True,
+            "linkedin_verified": True,
+            "company_verified": True
         },
         {
             "id": "user2", 
@@ -460,7 +466,10 @@ def initialize_sample_data():
             "is_active": True,
             "created_at": datetime.utcnow(),
             "review_count": 4,
-            "reputation_score": 92
+            "reputation_score": 92,
+            "email_verified": True,
+            "linkedin_verified": True,
+            "company_verified": False
         },
         {
             "id": "user3",
@@ -471,7 +480,10 @@ def initialize_sample_data():
             "is_active": True,
             "created_at": datetime.utcnow(),
             "review_count": 2,
-            "reputation_score": 78
+            "reputation_score": 78,
+            "email_verified": True,
+            "linkedin_verified": False,
+            "company_verified": False
         }
     ]
     
@@ -1421,11 +1433,20 @@ async def get_person(person_id: str):
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
     
-    # Get reviews for this person
-    person_reviews = [
-        review for review in DATABASE["reviews"].values()
-        if review["person_id"] == person_id
-    ]
+    # Get reviews for this person with reviewer verification info
+    person_reviews = []
+    for review in DATABASE["reviews"].values():
+        if review["person_id"] == person_id:
+            # Add reviewer verification badges
+            reviewer = DATABASE["users"].get(review["reviewer_id"])
+            if reviewer:
+                review_copy = review.copy()
+                review_copy["reviewer_email_verified"] = reviewer.get("email_verified", False)
+                review_copy["reviewer_linkedin_verified"] = reviewer.get("linkedin_verified", False)
+                review_copy["reviewer_company_verified"] = reviewer.get("company_verified", False)
+                person_reviews.append(review_copy)
+            else:
+                person_reviews.append(review)
     
     return {
         "person": person,

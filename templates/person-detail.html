@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Person Profile - PeopleRate</title>
+    
+    <!-- Open Graph Meta Tags for Social Sharing -->
+    <meta property="og:type" content="profile">
+    <meta property="og:site_name" content="PeopleRate">
+    <meta property="og:title" content="View Profile on PeopleRate" id="og-title">
+    <meta property="og:description" content="See reviews and ratings for this professional" id="og-description">
+    <meta property="og:url" content="" id="og-url">
+    <meta property="og:image" content="/static/images/og-default.png" id="og-image">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@PeopleRate">
+    <meta name="twitter:title" content="View Profile on PeopleRate" id="twitter-title">
+    <meta name="twitter:description" content="See reviews and ratings for this professional" id="twitter-description">
+    <meta name="twitter:image" content="/static/images/og-default.png" id="twitter-image">
+    
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         .person-container {
@@ -1063,6 +1079,29 @@
                 const reviewsHTML = reviews.map(review => createReviewCard(review)).join('');
                 document.getElementById('reviewsList').innerHTML = reviewsHTML;
             }
+            
+            // Update Open Graph meta tags for social sharing
+            updateOpenGraphTags(person);
+        }
+        
+        function updateOpenGraphTags(person) {
+            const url = window.location.href;
+            const title = `${person.name} - ${person.job_title || 'Professional'} | PeopleRate`;
+            const rating = person.average_rating ? person.average_rating.toFixed(1) : 'No';
+            const reviewCount = person.review_count || 0;
+            const description = `${person.name} has ${rating} ⭐ rating with ${reviewCount} review${reviewCount !== 1 ? 's' : ''} on PeopleRate. ${person.bio ? person.bio.substring(0, 100) + '...' : 'View reviews and ratings.'}`;
+            
+            // Update page title
+            document.title = title;
+            
+            // Update Open Graph tags
+            document.getElementById('og-title').setAttribute('content', title);
+            document.getElementById('og-description').setAttribute('content', description);
+            document.getElementById('og-url').setAttribute('content', url);
+            
+            // Update Twitter Card tags
+            document.getElementById('twitter-title').setAttribute('content', title);
+            document.getElementById('twitter-description').setAttribute('content', description);
         }
 
         function createReviewCard(review) {
@@ -1082,6 +1121,18 @@
             } else if (review.verification_status === 'rejected') {
                 verificationBadge = '<span style="background: #f44336; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 10px;">⚠ Unverified</span>';
             }
+            
+            // Reviewer verification badges (email, LinkedIn, company)
+            let reviewerBadges = '';
+            if (review.reviewer_email_verified) {
+                reviewerBadges += '<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px;" title="Email Verified">✉️</span>';
+            }
+            if (review.reviewer_linkedin_verified) {
+                reviewerBadges += '<span style="background: #e3f2fd; color: #0077b5; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px;" title="LinkedIn Verified">in</span>';
+            }
+            if (review.reviewer_company_verified) {
+                reviewerBadges += '<span style="background: #fff3e0; color: #f57c00; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px;" title="Company Verified">🏢</span>';
+            }
 
             return `
                 <div class="review-card">
@@ -1091,6 +1142,7 @@
                             <div class="reviewer-details">
                                 <div class="reviewer-username">
                                     @${review.reviewer_username}
+                                    ${reviewerBadges}
                                     ${verificationBadge}
                                 </div>
                                 <div class="review-date">${date}</div>
@@ -1410,19 +1462,28 @@
         // Social sharing functions
         function shareOnTwitter(event) {
             event.preventDefault();
+            if (!currentPerson) return;
+            
             const url = encodeURIComponent(window.location.href);
-            const text = encodeURIComponent(`Check out ${currentPerson?.name || 'this profile'} on PeopleRate`);
-            window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank', 'width=600,height=400');
+            const rating = currentPerson.average_rating ? currentPerson.average_rating.toFixed(1) : 'N/A';
+            const text = encodeURIComponent(`Check out ${currentPerson.name}'s profile on PeopleRate! ⭐ ${rating}/5.0 rating with ${currentPerson.review_count || 0} reviews.`);
+            const hashtags = encodeURIComponent('PeopleRate,Reviews,Professionals');
+            
+            window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}&hashtags=${hashtags}`, '_blank', 'width=600,height=400');
         }
 
         function shareOnLinkedIn(event) {
             event.preventDefault();
+            if (!currentPerson) return;
+            
             const url = encodeURIComponent(window.location.href);
-            window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
+            window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=600');
         }
 
         function shareOnFacebook(event) {
             event.preventDefault();
+            if (!currentPerson) return;
+            
             const url = encodeURIComponent(window.location.href);
             window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
         }
