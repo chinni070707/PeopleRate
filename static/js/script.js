@@ -40,9 +40,9 @@ async function searchPeople() {
 
     try {
         const response = await apiCall(`/persons/search?q=${encodeURIComponent(query)}`);
-        const persons = await response.json();
+        const searchData = await response.json();
         
-        displaySearchResults(persons);
+        displaySearchResults(searchData);
     } catch (error) {
         console.error('Search error:', error);
         showAlert('Error searching for people', 'error');
@@ -50,25 +50,35 @@ async function searchPeople() {
 }
 
 // Display search results
-function displaySearchResults(persons) {
+function displaySearchResults(searchData = {}) {
     const resultsDiv = document.getElementById('searchResults');
+    const persons = searchData.persons || [];
+    const query = searchData.query || document.getElementById('searchInput').value.trim();
     
     if (persons.length === 0) {
-        resultsDiv.innerHTML = '<p>No people found. <a href="#" onclick="showAddPersonForm()">Add this person?</a></p>';
+        const message = searchData.suggest_add_person
+            ? `No strong matches found for "${query}". Try refining the name or add the person below.`
+            : 'No people found. You can add them manually.';
+        resultsDiv.innerHTML = `
+            <div class="no-results-card">
+                <p>${message}</p>
+                <button class="btn-add-person" onclick="openAddPersonModal()">➕ Add This Person</button>
+            </div>
+        `;
         return;
     }
 
     resultsDiv.innerHTML = persons.map(person => `
         <div class="person-card" onclick="viewPerson('${person.id}')">
-            <div class="person-name">${person.full_name}</div>
+            <div class="person-name">${person.full_name || person.name}</div>
             <div class="person-details">
                 ${person.company ? `Company: ${person.company}` : ''}
                 ${person.city ? `City: ${person.city}` : ''}
                 ${person.job_title ? `Job: ${person.job_title}` : ''}
             </div>
             <div class="person-rating">
-                <span class="stars">${generateStars(person.average_rating)}</span>
-                <span>${person.average_rating.toFixed(1)} (${person.total_reviews} reviews)</span>
+                <span class="stars">${generateStars(person.average_rating || 0)}</span>
+                <span>${(person.average_rating || 0).toFixed(1)} (${person.review_count || person.total_reviews || 0} reviews)</span>
             </div>
         </div>
     `).join('');

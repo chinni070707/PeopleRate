@@ -766,6 +766,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     
     return user
 
+MIN_SEARCH_CONFIDENCE = 55
+
 def search_persons_enhanced(query: str, limit: int = 10) -> List[Dict]:
     """Enhanced search with pattern recognition and scoring"""
     if not query:
@@ -1004,13 +1006,31 @@ async def search_persons(
         
         # Sort by score
         results.sort(key=lambda x: x[1], reverse=True)
-        persons = [person for person, score in results[:limit]]
+        top_score = results[0][1] if results else 0
+        confidence_cutoff = max(MIN_SEARCH_CONFIDENCE, top_score - 15)
+        suggest_add_person = True
+        persons: List[Dict[str, Any]] = []
+
+        if results and top_score >= MIN_SEARCH_CONFIDENCE:
+            persons = [person for person, score in results if score >= confidence_cutoff][:limit]
+            suggest_add_person = len(persons) == 0
+        else:
+            logger.info(
+                "Low confidence search - suppressing matches (query='%s', top_score=%s)",
+                q,
+                top_score
+            )
+            suggest_add_person = True
+            persons = []
         
         return {
             "query": q,
             "parsed": parsed_query,
             "count": len(persons),
-            "persons": persons
+            "persons": persons,
+            "top_score": top_score,
+            "confidence_cutoff": confidence_cutoff,
+            "suggest_add_person": suggest_add_person
         }
     except Exception as e:
         logger.error(f"Search error: {str(e)}")

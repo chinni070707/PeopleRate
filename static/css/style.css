@@ -626,6 +626,26 @@ body {
 /* Search Results */
 .search-results {
     margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.no-results-card {
+    grid-column: 1 / -1;
+    background: #fff7ea;
+    border: 1px dashed #f0b429;
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+    color: #8a6400;
+    font-size: 1rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+}
+
+.no-results-card .btn-add-person {
+    margin-top: 0.75rem;
+    width: auto;
 }
 
 .person-card {
