@@ -133,7 +133,7 @@
                     
                     <div class="photo-upload-actions">
                         <button type="button" class="btn-secondary" onclick="closeAddPersonModal()">Cancel</button>
-                        <button type="button" class="btn-preview" onclick="previewParsedPerson()">🔍 Preview Parsing</button>
+                        <button type="button" class="btn-preview" id="previewParsingBtn" onclick="previewParsedPerson()" style="display: none;">🔍 Preview Parsing</button>
                         <button type="submit" class="btn-primary">Add Person & Continue</button>
                     </div>
                 </form>
@@ -723,6 +723,19 @@
         // Add Person Modal Functions
         function openAddPersonModal() {
             document.getElementById('addPersonModal').style.display = 'flex';
+            
+            // Add input listener to show/hide preview button
+            const descriptionInput = document.getElementById('personDescription');
+            const previewBtn = document.getElementById('previewParsingBtn');
+            
+            descriptionInput.addEventListener('input', function() {
+                // Show preview button only if user has typed at least 20 characters and is logged in
+                if (this.value.trim().length >= 20 && currentUser) {
+                    previewBtn.style.display = 'inline-block';
+                } else {
+                    previewBtn.style.display = 'none';
+                }
+            });
         }
 
         function closeAddPersonModal() {
@@ -790,6 +803,15 @@
 
         // NEW: Natural Language Processing for Add Person
         async function previewParsedPerson() {
+            // Check authentication first
+            if (!currentUser) {
+                showNotification('Please login to use the AI preview feature', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/auth';
+                }, 1500);
+                return;
+            }
+
             const description = document.getElementById('personDescription').value;
             
             if (!description || description.trim().length < 10) {
@@ -798,7 +820,13 @@
             }
 
             try {
-                // Call the NLP parsing endpoint (we'll create a preview endpoint)
+                // Show loading state
+                const previewBtn = document.querySelector('.btn-preview');
+                const originalText = previewBtn.innerHTML;
+                previewBtn.innerHTML = '⏳ Parsing...';
+                previewBtn.disabled = true;
+
+                // Call the NLP parsing endpoint
                 const token = localStorage.getItem('token');
                 const formData = new FormData();
                 formData.append('description', description);
@@ -838,7 +866,11 @@
                     
                     showNotification('✅ AI successfully parsed the description!', 'success');
                     
-                    // Auto-close the created person (API creates it)
+                    // Restore button state
+                    previewBtn.innerHTML = originalText;
+                    previewBtn.disabled = false;
+                    
+                    // Auto-close and redirect after preview
                     setTimeout(() => {
                         closeAddPersonModal();
                         window.location.href = `/person/${result.person_id}`;
@@ -847,6 +879,10 @@
                 } else {
                     const error = await response.json();
                     showNotification(error.detail || 'Failed to parse description', 'error');
+                    
+                    // Restore button state
+                    previewBtn.innerHTML = originalText;
+                    previewBtn.disabled = false;
                 }
             } catch (error) {
                 console.error('Error parsing description:', error);
