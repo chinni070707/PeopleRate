@@ -24,9 +24,13 @@ from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from better_profanity import profanity
 
 # Load environment variables
 load_dotenv()
+
+# Initialize profanity filter
+profanity.load_censor_words()
 
 # Import moderation system
 from moderation import contains_profanity, filter_profanity, analyze_content, should_auto_flag
@@ -984,6 +988,60 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="User not found")
     
     return user
+
+# Content Moderation Functions
+def check_profanity(text: str) -> dict:
+    """Check if text contains profanity and return analysis"""
+    has_profanity = profanity.contains_profanity(text)
+    censored_text = profanity.censor(text) if has_profanity else text
+    
+    return {
+        "has_profanity": has_profanity,
+        "original_text": text,
+        "censored_text": censored_text,
+        "severity": "high" if has_profanity else "none"
+    }
+
+def filter_profanity(text: str) -> str:
+    """Remove profanity from text and return cleaned version"""
+    return profanity.censor(text)
+
+def should_auto_flag(text: str) -> bool:
+    """Determine if content should be auto-flagged for moderation"""
+    # Check for profanity
+    if profanity.contains_profanity(text):
+        return True
+    
+    # Check for excessive caps (shouting)
+    if len(text) > 20 and sum(1 for c in text if c.isupper()) / len(text) > 0.7:
+        return True
+    
+    # Check for suspicious patterns
+    spam_patterns = [
+        r'(click here|buy now|limited offer)',
+        r'(\d{10,})',  # Long numbers (potential spam)
+        r'(http://|https://|www\.)',  # URLs
+    ]
+    
+    for pattern in spam_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            return True
+    
+    return False
+
+def analyze_content(text: str) -> dict:
+    """Comprehensive content analysis for moderation"""
+    profanity_check = check_profanity(text)
+    auto_flag = should_auto_flag(text)
+    
+    return {
+        "has_profanity": profanity_check["has_profanity"],
+        "censored_text": profanity_check["censored_text"],
+        "should_flag": auto_flag,
+        "severity": profanity_check["severity"],
+        "original_length": len(text),
+        "cleaned_length": len(profanity_check["censored_text"])
+    }
 
 MIN_SEARCH_CONFIDENCE = 55
 
