@@ -514,6 +514,29 @@
             document.getElementById('profileMenuUsername').textContent = `@${user.username}`;
             document.getElementById('profileMenuEmail').textContent = user.email;
             
+            // Add admin link if user is admin
+            const profileMenuItems = document.querySelector('.profile-menu-items');
+            const existingAdminLink = document.getElementById('adminDashboardLink');
+            
+            if ((user.role === 'admin' || user.is_admin) && !existingAdminLink) {
+                const adminLink = document.createElement('a');
+                adminLink.id = 'adminDashboardLink';
+                adminLink.href = '/admin/dashboard';
+                adminLink.className = 'profile-menu-item';
+                adminLink.innerHTML = '🛡️ Admin Dashboard';
+                adminLink.style.background = '#e3f2fd';
+                adminLink.style.fontWeight = '600';
+                adminLink.style.color = '#1a73e8';
+                
+                // Insert before settings
+                const settingsItem = Array.from(profileMenuItems.children).find(item => 
+                    item.textContent.includes('Settings')
+                );
+                if (settingsItem) {
+                    profileMenuItems.insertBefore(adminLink, settingsItem);
+                }
+            }
+            
             // Load profile photo from localStorage or user data
             const savedPhoto = localStorage.getItem('profilePhoto');
             if (savedPhoto) {

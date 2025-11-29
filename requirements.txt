@@ -15,3 +15,5 @@ bcrypt>=4.0.0
 better-profanity>=0.7.0
 bleach>=6.0.0
 python-jose[cryptography]>=3.3.0
+aiofiles>=23.0.0
+pillow>=10.0.0

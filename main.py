@@ -4,11 +4,12 @@ Features comprehensive search, user management, anonymous reviews, and privacy-f
 Empowering authentic peer reviews while protecting user identity
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Query, Request, Form
+from fastapi import FastAPI, HTTPException, Depends, Query, Request, Form, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -24,6 +25,10 @@ from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import aiofiles
+from pathlib import Path
+from PIL import Image
+import shutil
 
 # Load environment variables
 load_dotenv()
@@ -112,6 +117,59 @@ async def add_security_headers(request: Request, call_next):
 # Static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# File upload configuration
+UPLOAD_DIR = Path("uploads/review_proofs")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+async def save_proof_file(file: UploadFile, review_id: str) -> str:
+    """Save uploaded proof file and return file path"""
+    if not file:
+        return None
+    
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Validate file size
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+    
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+    
+    # Generate unique filename
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"{review_id}_{timestamp}{file_ext}"
+    file_path = UPLOAD_DIR / filename
+    
+    # Save file
+    async with aiofiles.open(file_path, 'wb') as f:
+        content = await file.read()
+        await f.write(content)
+    
+    # Optimize image if it's an image file
+    if file_ext in {".jpg", ".jpeg", ".png"}:
+        try:
+            img = Image.open(file_path)
+            # Resize if too large (max 1920x1920)
+            if img.width > 1920 or img.height > 1920:
+                img.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
+                img.save(file_path, optimize=True, quality=85)
+        except Exception as e:
+            logger.warning(f"Image optimization failed: {e}")
+    
+    return str(file_path)
 
 # Security
 security = HTTPBearer()
@@ -291,6 +349,11 @@ class Review(ReviewBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     is_verified: bool = False
+    verification_status: str = Field(default="pending")  # pending, verified, rejected
+    proof_document: Optional[str] = None  # File path to proof document
+    admin_notes: Optional[str] = None  # Admin's verification notes
+    verified_by: Optional[str] = None  # Admin username who verified
+    verified_at: Optional[datetime] = None
     helpful_count: int = 0
     reported_count: int = 0  # For moderation
     
@@ -384,7 +447,9 @@ def initialize_sample_data():
             "is_active": True,
             "created_at": datetime.utcnow(),
             "review_count": 3,
-            "reputation_score": 85
+            "reputation_score": 85,
+            "role": "admin",  # Admin user for testing
+            "is_admin": True
         },
         {
             "id": "user2", 
@@ -1076,6 +1141,11 @@ async def profile_page(request: Request):
     """User profile page"""
     return templates.TemplateResponse("profile.html", {"request": request})
 
+@app.get("/admin/dashboard")
+async def admin_dashboard_page(request: Request):
+    """Admin dashboard for review verification"""
+    return templates.TemplateResponse("admin_dashboard.html", {"request": request})
+
 @app.get("/my-reviews")
 async def my_reviews_page(request: Request):
     """My reviews page"""
@@ -1400,6 +1470,11 @@ async def create_review(request: Request, review: ReviewBase, current_user: dict
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
         "is_verified": False,
+        "verification_status": "pending",
+        "proof_document": None,
+        "admin_notes": None,
+        "verified_by": None,
+        "verified_at": None,
         "helpful_count": 0,
         "reported_count": 1 if auto_flagged else 0  # Auto-flag if score is high
     })
@@ -1426,7 +1501,118 @@ async def create_review(request: Request, review: ReviewBase, current_user: dict
         "message": "Review created successfully", 
         "review_id": review_id,
         "reviewer_username": current_user["username"],
-        "moderation_note": "Content was automatically filtered" if content_analysis["has_profanity"] else None
+        "moderation_note": "Content was automatically filtered" if content_analysis["has_profanity"] else None,
+        "verification_note": "Upload proof document to get your review verified"
+    }
+
+
+@app.post("/api/reviews/with-proof")
+@limiter.limit("5/hour")
+async def create_review_with_proof(
+    request: Request,
+    person_id: str = Form(...),
+    rating: int = Form(..., ge=1, le=5),
+    comment: str = Form(..., min_length=10, max_length=1000),
+    title: Optional[str] = Form(None, max_length=100),
+    relationship: Optional[str] = Form(None),
+    work_quality: Optional[int] = Form(None, ge=1, le=5),
+    communication: Optional[int] = Form(None, ge=1, le=5),
+    reliability: Optional[int] = Form(None, ge=1, le=5),
+    professionalism: Optional[int] = Form(None, ge=1, le=5),
+    would_recommend: Optional[bool] = Form(None),
+    proof_file: Optional[UploadFile] = File(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a review with proof document upload"""
+    # Check if person exists
+    person = DATABASE["persons"].get(person_id)
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Check if user already reviewed this person
+    existing_review = None
+    for r in DATABASE["reviews"].values():
+        if r["reviewer_id"] == current_user["id"] and r["person_id"] == person_id:
+            existing_review = r
+            break
+    
+    if existing_review:
+        raise HTTPException(status_code=400, detail="You have already reviewed this person")
+    
+    # Content moderation
+    content_analysis = analyze_content(comment)
+    auto_flagged = should_auto_flag(comment)
+    
+    if content_analysis["has_profanity"]:
+        comment = filter_profanity(comment)
+        logger.warning(f"Profanity filtered in review by {current_user['username']}")
+    
+    # Create review
+    review_id = str(ObjectId())
+    
+    # Save proof file if provided
+    proof_path = None
+    if proof_file and proof_file.filename:
+        try:
+            proof_path = await save_proof_file(proof_file, review_id)
+            logger.info(f"Proof document saved: {proof_path}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to save proof file: {e}")
+            raise HTTPException(status_code=500, detail="Failed to save proof document")
+    
+    review_data = {
+        "id": review_id,
+        "person_id": person_id,
+        "reviewer_id": current_user["id"],
+        "reviewer_username": current_user["username"],
+        "rating": rating,
+        "comment": comment,
+        "title": title,
+        "relationship": relationship,
+        "work_quality": work_quality,
+        "communication": communication,
+        "reliability": reliability,
+        "professionalism": professionalism,
+        "would_recommend": would_recommend,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "is_verified": False,
+        "verification_status": "pending" if proof_path else "no_proof",
+        "proof_document": proof_path,
+        "admin_notes": None,
+        "verified_by": None,
+        "verified_at": None,
+        "helpful_count": 0,
+        "reported_count": 1 if auto_flagged else 0
+    }
+    
+    DATABASE["reviews"][review_id] = review_data
+    
+    # Update person's rating
+    person_reviews = [r for r in DATABASE["reviews"].values() if r["person_id"] == person_id]
+    total_rating = sum(r["rating"] for r in person_reviews)
+    review_count = len(person_reviews)
+    average_rating = total_rating / review_count if review_count > 0 else 0
+    
+    DATABASE["persons"][person_id].update({
+        "review_count": review_count,
+        "average_rating": round(average_rating, 1),
+        "total_rating": total_rating,
+        "updated_at": datetime.utcnow()
+    })
+    
+    # Update user's review count
+    DATABASE["users"][current_user["id"]]["review_count"] = DATABASE["users"][current_user["id"]].get("review_count", 0) + 1
+    
+    return {
+        "message": "Review created successfully",
+        "review_id": review_id,
+        "reviewer_username": current_user["username"],
+        "has_proof": proof_path is not None,
+        "verification_status": "pending" if proof_path else "no_proof",
+        "note": "Your review will be verified by an admin if proof was provided" if proof_path else "Upload proof to get your review verified"
     }
 
 @app.get("/api/reviews/")
@@ -1510,6 +1696,151 @@ async def flag_review(
         "review_reported_count": review["reported_count"],
         "auto_hidden": review.get("is_hidden", False)
     }
+
+
+# ===== ADMIN ENDPOINTS FOR REVIEW VERIFICATION =====
+
+def is_admin(user: dict) -> bool:
+    """Check if user has admin role"""
+    return user.get("role") == "admin" or user.get("is_admin", False)
+
+
+@app.get("/api/admin/reviews/pending")
+async def get_pending_reviews(
+    current_user: dict = Depends(get_current_user),
+    limit: int = Query(50, le=200)
+):
+    """Get all reviews pending verification (admin only)"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get reviews with pending verification status and proof documents
+    pending_reviews = [
+        r for r in DATABASE["reviews"].values()
+        if r.get("verification_status") == "pending" and r.get("proof_document")
+    ]
+    
+    # Sort by creation date (oldest first - FIFO)
+    pending_reviews.sort(key=lambda x: x["created_at"])
+    
+    # Add person and reviewer info
+    for review in pending_reviews:
+        person = DATABASE["persons"].get(review["person_id"])
+        if person:
+            review["person_name"] = person["name"]
+            review["person_email"] = person.get("email")
+        
+        reviewer = DATABASE["users"].get(review["reviewer_id"])
+        if reviewer:
+            review["reviewer_email"] = reviewer.get("email")
+            review["reviewer_reputation"] = reviewer.get("reputation_score", 0)
+    
+    return {
+        "count": len(pending_reviews),
+        "reviews": pending_reviews[:limit]
+    }
+
+
+@app.get("/api/admin/reviews/{review_id}/proof")
+async def get_review_proof(
+    review_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get proof document for a review (admin only)"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    review = DATABASE["reviews"].get(review_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    proof_path = review.get("proof_document")
+    if not proof_path:
+        raise HTTPException(status_code=404, detail="No proof document attached to this review")
+    
+    # Check if file exists
+    if not Path(proof_path).exists():
+        raise HTTPException(status_code=404, detail="Proof document file not found")
+    
+    # Return file
+    return FileResponse(
+        proof_path,
+        media_type="application/octet-stream",
+        filename=Path(proof_path).name
+    )
+
+
+@app.post("/api/admin/reviews/{review_id}/verify")
+async def verify_review(
+    request: Request,
+    review_id: str,
+    approved: bool = Form(...),
+    admin_notes: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Approve or reject review verification (admin only)"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    review = DATABASE["reviews"].get(review_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Update review verification status
+    if approved:
+        review["is_verified"] = True
+        review["verification_status"] = "verified"
+        logger.info(f"✅ Review {review_id} VERIFIED by admin {current_user['username']}")
+    else:
+        review["is_verified"] = False
+        review["verification_status"] = "rejected"
+        logger.info(f"❌ Review {review_id} REJECTED by admin {current_user['username']}")
+    
+    review["admin_notes"] = admin_notes
+    review["verified_by"] = current_user["username"]
+    review["verified_at"] = datetime.utcnow()
+    review["updated_at"] = datetime.utcnow()
+    
+    # Update reviewer's reputation (reward for verified reviews)
+    reviewer = DATABASE["users"].get(review["reviewer_id"])
+    if reviewer and approved:
+        reviewer["reputation_score"] = reviewer.get("reputation_score", 0) + 10
+        logger.info(f"👍 Reviewer {reviewer['username']} reputation +10 (verified review)")
+    
+    return {
+        "message": f"Review {'verified' if approved else 'rejected'} successfully",
+        "review_id": review_id,
+        "verification_status": review["verification_status"],
+        "is_verified": review["is_verified"],
+        "verified_by": current_user["username"],
+        "verified_at": review["verified_at"].isoformat()
+    }
+
+
+@app.get("/api/admin/reviews/stats")
+async def get_verification_stats(current_user: dict = Depends(get_current_user)):
+    """Get verification statistics (admin only)"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    all_reviews = list(DATABASE["reviews"].values())
+    
+    stats = {
+        "total_reviews": len(all_reviews),
+        "pending_verification": len([r for r in all_reviews if r.get("verification_status") == "pending"]),
+        "verified": len([r for r in all_reviews if r.get("verification_status") == "verified"]),
+        "rejected": len([r for r in all_reviews if r.get("verification_status") == "rejected"]),
+        "no_proof": len([r for r in all_reviews if r.get("verification_status") == "no_proof"]),
+        "with_proof": len([r for r in all_reviews if r.get("proof_document")]),
+        "verification_rate": 0
+    }
+    
+    # Calculate verification rate
+    total_with_proof = stats["verified"] + stats["rejected"]
+    if total_with_proof > 0:
+        stats["verification_rate"] = round((stats["verified"] / total_with_proof) * 100, 1)
+    
+    return stats
 
 
 @app.get("/api/stats")
