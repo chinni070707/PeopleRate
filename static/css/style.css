@@ -1002,6 +1002,32 @@ body {
     font-weight: 700;
 }
 
+.reviews-scrollable-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) #f0f0f0;
+}
+
+.reviews-scrollable-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.reviews-scrollable-container::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.reviews-scrollable-container::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+.reviews-scrollable-container::-webkit-scrollbar-thumb:hover {
+    background: #006f52;
+}
+
 .review-card {
     background: var(--white);
     border: 1px solid var(--border-color);

@@ -123,7 +123,9 @@ ACCESS_TOKEN_EXPIRE = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 DATABASE = {
     "users": {},
     "persons": {},
-    "reviews": {}
+    "reviews": {},
+    "scams": {},
+    "scam_votes": {}
 }
 
 # Enhanced Pydantic Models
@@ -295,6 +297,32 @@ class Review(ReviewBase):
     class Config:
         populate_by_name = True
 
+# Scam Alert Models
+class ScamBase(BaseModel):
+    title: str = Field(..., min_length=10, max_length=200)
+    description: str = Field(..., min_length=50, max_length=1000)
+    how_it_works: str = Field(..., min_length=50, max_length=1000)
+    prevention_tips: List[str]
+    severity: str = Field(..., pattern="^(Critical|High|Medium)$")
+    location: str = Field(default="Bengaluru, India")
+    reported_cases: int = Field(default=0, ge=0)
+
+class Scam(ScamBase):
+    id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
+    upvotes: int = 0
+    downvotes: int = 0
+    reported_date: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    
+    class Config:
+        populate_by_name = True
+
+class ScamVote(BaseModel):
+    scam_id: str
+    user_id: str
+    vote_type: str  # 'upvote' or 'downvote'
+    voted_at: datetime = Field(default_factory=datetime.utcnow)
+
 # Enhanced sample data with more realistic profiles
 def initialize_sample_data():
     """Initialize sample data; prefers Bengaluru-local dataset when available."""
@@ -332,6 +360,9 @@ def initialize_sample_data():
 
             DATABASE["persons"][person_id] = person
 
+        # Initialize scam alerts for Bengaluru seed too
+        initialize_scam_alerts()
+        
         logger.info(
             "Seeded Bengaluru dataset: %s users, %s vendors, %s reviews",
             len(DATABASE["users"]),
@@ -783,12 +814,148 @@ def initialize_sample_data():
         
     for review in reviews_data:
         DATABASE["reviews"][review["id"]] = review
+    
+    # Initialize scam alerts
+    initialize_scam_alerts()
+
+def initialize_scam_alerts():
+    """Initialize common scam alerts for Bengaluru/India"""
+    scams_data = [
+        {
+            "id": "scam_001",
+            "title": "📞 OTP Call Merging Scam - Bank Account Takeover",
+            "description": "Fraudsters call pretending to be bank officials or delivery agents, asking you to press numbers (like *1 or 0) during the call. This triggers call forwarding/merging, giving them access to your OTP messages and potentially your bank account.",
+            "how_it_works": "The scammer calls posing as a bank representative, courier service, or customer care. They ask you to press certain digits (*1, 0, etc.) claiming it's for verification or to cancel a fake transaction. When you press these numbers, it activates call forwarding on your phone, redirecting all your calls and SMS (including OTPs) to their number. They then use these OTPs to access your bank accounts, credit cards, or other sensitive accounts.",
+            "prevention_tips": [
+                "NEVER press any numbers (*1, 0, #) when receiving unexpected calls from 'banks' or 'couriers'",
+                "Banks and delivery services will NEVER ask you to press digits during a call",
+                "If asked to press buttons, hang up immediately and call the official customer care number",
+                "Check your phone's call forwarding settings regularly (dial *#21# to check)",
+                "Enable two-factor authentication beyond just SMS OTPs (use authenticator apps)",
+                "If you've pressed any numbers during a suspicious call, immediately dial ##002# to deactivate all call forwarding"
+            ],
+            "severity": "Critical",
+            "location": "Bengaluru & All India",
+            "reported_cases": 2847,
+            "upvotes": 1543,
+            "downvotes": 12,
+            "reported_date": datetime.utcnow() - timedelta(days=5),
+            "last_updated": datetime.utcnow() - timedelta(days=1)
+        },
+        {
+            "id": "scam_002",
+            "title": "🏍️ Two-Wheeler Accident Extortion Scam",
+            "description": "Bikers intentionally hit your vehicle at low speed, then demand immediate cash payment (₹5,000-₹20,000) claiming damage and threatening to involve police. They create a scene and pressure you to pay on the spot.",
+            "how_it_works": "A bike rider (often working in a group) deliberately hits your car or two-wheeler at a traffic signal or quiet road. They immediately start shouting about damage to their bike, threatening to call police, or claim injury. They demand instant cash settlement, usually ₹10,000-₹20,000. If you refuse, their accomplices arrive to intimidate you. They target lone drivers, especially women and elderly, counting on your fear of police hassle.",
+            "prevention_tips": [
+                "Stay calm and insist on filing a police complaint - genuine accident victims won't refuse",
+                "Take photos/videos of the scene, damage, and people involved immediately",
+                "Call 100 (police) or 112 (emergency) immediately if threatened",
+                "Don't agree to cash settlement on the spot - always involve police for insurance claims",
+                "Install a dashcam in your vehicle to record such incidents",
+                "Note the bike number plate - if they resist, it's likely a scam",
+                "If in a crowded area, ask bystanders to stay as witnesses"
+            ],
+            "severity": "High",
+            "location": "Bengaluru (ORR, Marathahalli, Whitefield, HSR Layout)",
+            "reported_cases": 523,
+            "upvotes": 892,
+            "downvotes": 34,
+            "reported_date": datetime.utcnow() - timedelta(days=12),
+            "last_updated": datetime.utcnow() - timedelta(days=3)
+        },
+        {
+            "id": "scam_003",
+            "title": "📦 Fake Courier OTP Scam",
+            "description": "Scammers pose as courier delivery agents (Swiggy, Zomato, Amazon, Flipkart) and ask for OTPs claiming it's needed to deliver your package or verify your identity. They use the OTP to access your account or make fraudulent transactions.",
+            "how_it_works": "You receive a call from someone claiming to be from a delivery service. They say they're at your door or need to verify delivery. They ask you to share the OTP that was just sent to your phone 'for verification'. Once shared, they use this OTP to access your payment apps (PhonePe, Paytm, GPay), e-commerce accounts, or bank accounts to make unauthorized purchases or transfers.",
+            "prevention_tips": [
+                "Delivery agents NEVER need OTPs - OTPs are only for YOU to verify transactions",
+                "Never share OTPs with anyone, even if they claim to be from courier services",
+                "Genuine delivery persons only need your signature or a package code, not OTP",
+                "If someone asks for OTP, hang up and contact the official customer care",
+                "Enable app-level locks (PIN/fingerprint) on payment apps for extra security"
+            ],
+            "severity": "Critical",
+            "location": "All India (High in Bengaluru, Delhi, Mumbai)",
+            "reported_cases": 1654,
+            "upvotes": 1205,
+            "downvotes": 18,
+            "reported_date": datetime.utcnow() - timedelta(days=8),
+            "last_updated": datetime.utcnow() - timedelta(days=2)
+        },
+        {
+            "id": "scam_004",
+            "title": "⚡ Electricity Bill Refund Scam",
+            "description": "Fraudsters call claiming to be from BESCOM (Bangalore Electricity Supply Company) offering refunds for overpaid electricity bills. They ask you to click a link or share bank details to process the 'refund'.",
+            "how_it_works": "The scammer calls saying you're eligible for a refund due to billing errors or government schemes. They send a link via SMS or WhatsApp asking you to enter bank details, card numbers, CVV, or OTP to 'verify' your account for refund. The link is actually a phishing site that steals your banking credentials. Some variants involve screen-sharing apps that give them remote access to your phone.",
+            "prevention_tips": [
+                "BESCOM never calls customers for refunds - refunds are processed automatically to your bank",
+                "Never click on links sent via SMS or WhatsApp claiming to be from utility companies",
+                "BESCOM will never ask for bank details, OTPs, or card information over phone",
+                "Check your official BESCOM account online or visit the nearest BESCOM office for refund queries",
+                "Never download screen-sharing apps (AnyDesk, TeamViewer) at the request of unknown callers"
+            ],
+            "severity": "High",
+            "location": "Bengaluru",
+            "reported_cases": 389,
+            "upvotes": 645,
+            "downvotes": 28,
+            "reported_date": datetime.utcnow() - timedelta(days=15),
+            "last_updated": datetime.utcnow() - timedelta(days=5)
+        },
+        {
+            "id": "scam_005",
+            "title": "🏦 Bank Account Freeze Scam",
+            "description": "You receive a call claiming your bank account/PAN/Aadhaar is being blocked due to suspicious activity or KYC issues. They ask you to share OTP or install remote access apps to 'fix' the problem urgently.",
+            "how_it_works": "Scammers impersonate bank officials, RBI, or government agencies. They create panic by claiming your account will be frozen in hours unless you complete KYC update or verify your identity. They pressure you to share OTPs, banking credentials, or install remote access software (AnyDesk, TeamViewer). Once they have access, they drain your account, make online purchases, or steal sensitive data.",
+            "prevention_tips": [
+                "Banks NEVER call asking for OTPs, card details, CVV, or PIN",
+                "RBI/government agencies don't call individuals about account freezing",
+                "Never install screen-sharing apps at the request of unknown callers",
+                "If you receive such a call, hang up and call your bank's official customer care number",
+                "Banks send official letters/emails for KYC updates, not urgent phone calls",
+                "Visit your bank branch in person if you have doubts about your account status"
+            ],
+            "severity": "Critical",
+            "location": "All India",
+            "reported_cases": 3156,
+            "upvotes": 1876,
+            "downvotes": 24,
+            "reported_date": datetime.utcnow() - timedelta(days=3),
+            "last_updated": datetime.utcnow()
+        },
+        {
+            "id": "scam_006",
+            "title": "💼 Fake Job Offer Scam",
+            "description": "Scammers post fake job offers on WhatsApp, Telegram, or job portals offering work-from-home opportunities with high pay. They ask for registration fees, security deposits, or personal documents and disappear after receiving money.",
+            "how_it_works": "You receive messages about lucrative work-from-home jobs (data entry, product reviews, survey completion) with promises of ₹20,000-₹50,000/month for minimal work. They ask for a registration fee (₹500-₹5,000), 'refundable' security deposit, or copies of Aadhaar/PAN. Once paid, they either vanish or keep asking for more fees citing various reasons (training, software, verification).",
+            "prevention_tips": [
+                "Legitimate companies never ask for money upfront for job offers",
+                "Research the company thoroughly - check reviews, official website, and registration",
+                "Be wary of jobs promising unusually high pay for simple tasks",
+                "Never share Aadhaar/PAN copies unless verified through official channels",
+                "If asked to pay for 'training' or 'registration', it's likely a scam",
+                "Use verified job portals (Naukri, LinkedIn) and ignore WhatsApp/Telegram job offers"
+            ],
+            "severity": "Medium",
+            "location": "All India (targeting youth in Bengaluru, Hyderabad, Delhi)",
+            "reported_cases": 1247,
+            "upvotes": 723,
+            "downvotes": 56,
+            "reported_date": datetime.utcnow() - timedelta(days=20),
+            "last_updated": datetime.utcnow() - timedelta(days=7)
+        }
+    ]
+    
+    for scam in scams_data:
+        DATABASE["scams"][scam["id"]] = scam
 
 # INITIALIZE DATABASE IMMEDIATELY ON MODULE LOAD
 logger.info("🚀 PeopleRate starting up...")
 logger.info("🔧 Initializing in-memory database...")
 initialize_sample_data()
-logger.info(f"✅ Database ready: {len(DATABASE['users'])} users, {len(DATABASE['persons'])} persons, {len(DATABASE['reviews'])} reviews")
+logger.info(f"✅ Database ready: {len(DATABASE['users'])} users, {len(DATABASE['persons'])} persons, {len(DATABASE['reviews'])} reviews, {len(DATABASE['scams'])} scam alerts")
 logger.info("🌐 Server is ready to accept connections on http://localhost:8080")
 
 # Helper functions
@@ -930,6 +1097,11 @@ async def privacy_page(request: Request):
 async def moderation_page(request: Request):
     """Moderation Guidelines page"""
     return templates.TemplateResponse("moderation.html", {"request": request})
+
+@app.get("/scam-alert")
+async def scam_alert_page(request: Request):
+    """Scam Alert page"""
+    return templates.TemplateResponse("scam-alert.html", {"request": request})
 
 @app.post("/api/auth/register")
 @limiter.limit("5/hour")  # Prevent spam registration
@@ -1645,3 +1817,102 @@ async def review_claim(
     logger.info(f"Admin {current_user['username']} {action}d claim {claim_id}")
     
     return {"message": message}
+
+# Scam Alert API Endpoints
+@app.get("/api/scams")
+async def get_scams(current_user: dict = Depends(lambda: None)):
+    """Get all scam alerts sorted by net votes (upvotes - downvotes)"""
+    scams = list(DATABASE["scams"].values())
+    
+    # Calculate net votes and sort
+    for scam in scams:
+        scam["net_votes"] = scam["upvotes"] - scam["downvotes"]
+        
+        # If user is logged in, include their vote
+        if current_user:
+            user_vote = None
+            for vote in DATABASE["scam_votes"].values():
+                if vote["scam_id"] == scam["id"] and vote["user_id"] == current_user.get("id"):
+                    user_vote = vote["vote_type"]
+                    break
+            scam["user_vote"] = user_vote
+        else:
+            scam["user_vote"] = None
+    
+    # Sort by net votes descending (most upvoted first)
+    scams.sort(key=lambda x: x["net_votes"], reverse=True)
+    
+    return {"scams": scams, "count": len(scams)}
+
+@app.post("/api/scams/{scam_id}/vote")
+async def vote_on_scam(
+    scam_id: str,
+    vote_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Vote on a scam alert (upvote or downvote) - requires authentication"""
+    scam = DATABASE["scams"].get(scam_id)
+    if not scam:
+        raise HTTPException(status_code=404, detail="Scam alert not found")
+    
+    vote_type = vote_data.get("vote_type")
+    if vote_type not in ["upvote", "downvote"]:
+        raise HTTPException(status_code=400, detail="Invalid vote type. Use 'upvote' or 'downvote'")
+    
+    user_id = current_user["id"]
+    
+    # Check if user already voted
+    existing_vote = None
+    vote_key = None
+    for key, vote in DATABASE["scam_votes"].items():
+        if vote["scam_id"] == scam_id and vote["user_id"] == user_id:
+            existing_vote = vote
+            vote_key = key
+            break
+    
+    if existing_vote:
+        old_vote_type = existing_vote["vote_type"]
+        
+        # If same vote type, remove vote (toggle off)
+        if old_vote_type == vote_type:
+            del DATABASE["scam_votes"][vote_key]
+            if vote_type == "upvote":
+                scam["upvotes"] = max(0, scam["upvotes"] - 1)
+            else:
+                scam["downvotes"] = max(0, scam["downvotes"] - 1)
+            return {"message": "Vote removed", "scam": scam}
+        else:
+            # Change vote type
+            existing_vote["vote_type"] = vote_type
+            existing_vote["voted_at"] = datetime.utcnow()
+            
+            # Update counts
+            if vote_type == "upvote":
+                scam["upvotes"] += 1
+                scam["downvotes"] = max(0, scam["downvotes"] - 1)
+            else:
+                scam["downvotes"] += 1
+                scam["upvotes"] = max(0, scam["upvotes"] - 1)
+            
+            return {"message": "Vote changed", "scam": scam}
+    else:
+        # New vote
+        vote_id = str(ObjectId())
+        new_vote = {
+            "id": vote_id,
+            "scam_id": scam_id,
+            "user_id": user_id,
+            "vote_type": vote_type,
+            "voted_at": datetime.utcnow()
+        }
+        DATABASE["scam_votes"][vote_id] = new_vote
+        
+        # Update scam counts
+        if vote_type == "upvote":
+            scam["upvotes"] += 1
+        else:
+            scam["downvotes"] += 1
+        
+        scam["last_updated"] = datetime.utcnow()
+        
+        return {"message": "Vote registered", "scam": scam}

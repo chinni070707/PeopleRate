@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 Scam Alert - Stay Safe from Common Scams</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <meta name="description" content="Stay informed about the latest scams in Bengaluru and India. Community-driven scam alerts with upvoting to highlight the most dangerous threats.">
+    <style>
+        .scam-alert-hero {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .scam-alert-hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .scam-card {
+            background: white;
+            border: 2px solid #fee2e2;
+            border-left: 6px solid #dc2626;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .scam-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .scam-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+        
+        .scam-severity {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .severity-critical {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .severity-high {
+            background: #f97316;
+            color: white;
+        }
+        
+        .severity-medium {
+            background: #eab308;
+            color: #000;
+        }
+        
+        .scam-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #991b1b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .scam-description {
+            color: #374151;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+        
+        .scam-how-it-works {
+            background: #fef2f2;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .scam-how-it-works h4 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .scam-prevention {
+            background: #ecfdf5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .scam-prevention h4 {
+            color: #059669;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .scam-prevention ul {
+            margin: 0.5rem 0 0 1.5rem;
+            color: #065f46;
+        }
+        
+        .scam-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #fee2e2;
+        }
+        
+        .scam-meta {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .vote-section {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .vote-btn {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .vote-btn:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+        
+        .vote-btn.active-upvote {
+            background: #059669;
+            border-color: #059669;
+            color: white;
+        }
+        
+        .vote-btn.active-downvote {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: white;
+        }
+        
+        .vote-count {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #374151;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .scam-stats {
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+            background: #fef2f2;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #dc2626;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+        
+        .alert-banner {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        
+        .alert-banner strong {
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="/" style="text-decoration: none; color: inherit;">
+                    <h2>🌟 PeopleRate</h2>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/#search" class="nav-link">Search People</a>
+                <a href="/scam-alert" class="nav-link active">🚨 Scam Alert</a>
+                
+                <!-- Profile Section -->
+                <div id="profileSection" class="profile-section" style="display: none;">
+                    <div class="profile-dropdown">
+                        <button class="profile-btn" id="profileBtn">
+                            <span id="usernameDisplay">@username</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="profile-dropdown-content" id="profileDropdown">
+                            <a href="/profile">👤 My Profile</a>
+                            <a href="/my-reviews">📝 My Reviews</a>
+                            <a href="#" onclick="logout(); return false;">🚪 Logout</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Login Button -->
+                <div id="loginSection" class="login-section">
+                    <a href="/auth" class="btn-login">Login</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="scam-alert-hero">
+        <h1>🚨 Scam Alert - Stay Safe</h1>
+        <p style="font-size: 1.2rem; max-width: 800px; margin: 0 auto;">
+            Community-driven alerts about the latest scams in Bengaluru and across India. 
+            <strong>Upvote the most dangerous threats to help others stay safe!</strong>
+        </p>
+    </div>
+
+    <div class="main-content">
+        <!-- Alert Banner -->
+        <div class="alert-banner">
+            <strong>⚠️ Important:</strong> Never share OTPs, bank PINs, or CVV numbers with anyone - not even bank officials or police. 
+            Legitimate organizations will NEVER ask for these details over phone or WhatsApp.
+        </div>
+
+        <!-- Stats -->
+        <div class="scam-stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalScams">0</div>
+                <div class="stat-label">Active Scam Alerts</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalVotes">0</div>
+                <div class="stat-label">Community Votes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Monitoring</div>
+            </div>
+        </div>
+
+        <!-- Scam Cards Container -->
+        <div id="scamCardsContainer">
+            <!-- Scams will be loaded here dynamically -->
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About</h3>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/legal/terms">Terms of Service</a></li>
+                    <li><a href="/legal/privacy">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Stay Safe</h3>
+                <ul>
+                    <li><a href="/scam-alert">🚨 Scam Alerts</a></li>
+                    <li><a href="#">Report a Scam</a></li>
+                    <li><a href="#">Safety Tips</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 PeopleRate, Inc. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        let currentUser = null;
+
+        // Check login status
+        async function checkLoginStatus() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        currentUser = await response.json();
+                        document.getElementById('profileSection').style.display = 'block';
+                        document.getElementById('loginSection').style.display = 'none';
+                        document.getElementById('usernameDisplay').textContent = `@${currentUser.username}`;
+                    } else {
+                        localStorage.removeItem('token');
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                }
+            }
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+
+        // Profile dropdown toggle
+        document.getElementById('profileBtn')?.addEventListener('click', function() {
+            document.getElementById('profileDropdown').classList.toggle('show');
+        });
+
+        // Load scams
+        async function loadScams() {
+            try {
+                const response = await fetch('/api/scams');
+                const data = await response.json();
+                
+                document.getElementById('totalScams').textContent = data.scams.length;
+                
+                const totalVotes = data.scams.reduce((sum, scam) => sum + scam.upvotes + scam.downvotes, 0);
+                document.getElementById('totalVotes').textContent = totalVotes;
+                
+                renderScams(data.scams);
+            } catch (error) {
+                console.error('Error loading scams:', error);
+                document.getElementById('scamCardsContainer').innerHTML = 
+                    '<div class="alert alert-error">Failed to load scam alerts. Please try again later.</div>';
+            }
+        }
+
+        // Render scams
+        function renderScams(scams) {
+            const container = document.getElementById('scamCardsContainer');
+            
+            if (scams.length === 0) {
+                container.innerHTML = '<div class="alert">No scam alerts at the moment. Stay vigilant!</div>';
+                return;
+            }
+            
+            container.innerHTML = scams.map(scam => createScamCard(scam)).join('');
+        }
+
+        // Create scam card
+        function createScamCard(scam) {
+            const severityClass = `severity-${scam.severity.toLowerCase()}`;
+            const netVotes = scam.upvotes - scam.downvotes;
+            const reportedDate = new Date(scam.reported_date).toLocaleDateString('en-IN');
+            
+            const userVote = scam.user_vote || null; // 'upvote', 'downvote', or null
+            
+            return `
+                <div class="scam-card" data-scam-id="${scam.id}">
+                    <div class="scam-header">
+                        <div>
+                            <div class="scam-title">${scam.title}</div>
+                            <span class="scam-severity ${severityClass}">${scam.severity}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scam-description">${scam.description}</div>
+                    
+                    <div class="scam-how-it-works">
+                        <h4>🎯 How It Works:</h4>
+                        <p>${scam.how_it_works}</p>
+                    </div>
+                    
+                    <div class="scam-prevention">
+                        <h4>🛡️ How to Stay Safe:</h4>
+                        <ul>
+                            ${scam.prevention_tips.map(tip => `<li>${tip}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="scam-footer">
+                        <div class="scam-meta">
+                            <span>📍 ${scam.location}</span>
+                            <span>📅 Reported: ${reportedDate}</span>
+                            <span>⚠️ ${scam.reported_cases} cases</span>
+                        </div>
+                        
+                        <div class="vote-section">
+                            <button class="vote-btn ${userVote === 'upvote' ? 'active-upvote' : ''}" 
+                                    onclick="vote('${scam.id}', 'upvote')" 
+                                    title="This scam is dangerous">
+                                👍 <span class="vote-count">${scam.upvotes}</span>
+                            </button>
+                            <button class="vote-btn ${userVote === 'downvote' ? 'active-downvote' : ''}" 
+                                    onclick="vote('${scam.id}', 'downvote')" 
+                                    title="This seems less threatening">
+                                👎 <span class="vote-count">${scam.downvotes}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Vote on scam
+        async function vote(scamId, voteType) {
+            if (!currentUser) {
+                alert('Please login to vote on scam alerts');
+                window.location.href = '/auth';
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/scams/${scamId}/vote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ vote_type: voteType })
+                });
+                
+                if (response.ok) {
+                    // Reload scams to update vote counts
+                    loadScams();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to register vote');
+                }
+            } catch (error) {
+                console.error('Vote error:', error);
+                alert('Failed to register vote. Please try again.');
+            }
+        }
+
+        // Initialize page
+        window.addEventListener('load', function() {
+            checkLoginStatus();
+            loadScams();
+        });
+    </script>
+</body>
+</html>

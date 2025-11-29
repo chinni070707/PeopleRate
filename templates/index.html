@@ -17,7 +17,7 @@
             </div>
             <div class="nav-menu">
                 <a href="#search" class="nav-link">Search People</a>
-                <a href="#reviews" class="nav-link">Recent Reviews</a>
+                <a href="/scam-alert" class="nav-link">🚨 Scam Alert</a>
                 <a href="#about" class="nav-link">How it Works</a>
                 
                 <!-- Profile Section (shown when logged in) -->
@@ -251,7 +251,7 @@
         <!-- Recent Reviews Section -->
         <section id="reviews" class="recent-reviews">
             <h2>Recent Reviews</h2>
-            <div id="recentReviewsContainer">
+            <div id="recentReviewsContainer" class="reviews-scrollable-container">
                 <!-- Recent reviews will be loaded here -->
             </div>
         </section>
@@ -424,7 +424,7 @@
         // Load recent reviews
         async function loadRecentReviews() {
             try {
-                const response = await fetch('/api/reviews/?limit=5');
+                const response = await fetch('/api/reviews/?limit=2');
                 const data = await response.json();
                 
                 const container = document.getElementById('recentReviewsContainer');
