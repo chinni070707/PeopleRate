@@ -4,53 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found | PeopleRate</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        body {
+            background: linear-gradient(135deg, #f0f9f6 0%, #ffffff 100%);
+        }
         .error-container {
-            max-width: 600px;
-            margin: 100px auto;
+            max-width: 700px;
+            margin: 80px auto;
             text-align: center;
-            padding: 40px 20px;
+            padding: 50px 30px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 182, 122, 0.15);
+        }
+        .trust-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #00b67a 0%, #009660 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 182, 122, 0.3);
+        }
+        .error-code-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
         }
         .error-code {
-            font-size: 120px;
-            font-weight: 700;
+            font-size: 140px;
+            font-weight: 800;
             color: #00b67a;
             margin: 0;
             line-height: 1;
+            background: linear-gradient(135deg, #00b67a 0%, #005128 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+        }
+        .rating-stars {
+            position: absolute;
+            top: -10px;
+            right: -30px;
+            font-size: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
         .error-title {
             font-size: 32px;
-            font-weight: 600;
+            font-weight: 700;
             color: #191919;
-            margin: 20px 0 10px;
+            margin: 20px 0 15px;
         }
-        .error-message {
+        .error-subtitle {
             font-size: 18px;
             color: #666;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        .trust-check-box {
+            background: #f0f9f6;
+            border: 2px solid #00b67a;
+            border-radius: 16px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        .trust-check-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .trust-icon {
+            font-size: 32px;
+        }
+        .trust-check-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00b67a;
+            margin: 0;
+        }
+        .trust-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            color: #191919;
+        }
+        .trust-item-icon {
+            color: #00b67a;
+            font-weight: 700;
+        }
+        .error-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .error-stat {
+            text-align: center;
+        }
+        .error-stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #00b67a;
+            display: block;
+        }
+        .error-stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
         }
         .error-actions {
             display: flex;
             gap: 15px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 30px;
         }
         .error-btn {
-            padding: 12px 30px;
+            padding: 14px 32px;
             font-size: 16px;
             font-weight: 600;
-            border-radius: 8px;
+            border-radius: 10px;
             text-decoration: none;
             transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         .error-btn-primary {
             background: linear-gradient(135deg, #00b67a 0%, #005128 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(0, 182, 122, 0.3);
         }
         .error-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 182, 122, 0.3);
+            box-shadow: 0 6px 20px rgba(0, 182, 122, 0.4);
         }
         .error-btn-secondary {
             background: white;
@@ -59,24 +163,110 @@
         }
         .error-btn-secondary:hover {
             background: #f0f9f6;
+            transform: translateY(-2px);
         }
-        .error-illustration {
-            font-size: 80px;
-            margin-bottom: 20px;
+        .error-fun-fact {
+            margin-top: 30px;
+            padding: 15px;
+            background: #fffbf0;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 14px;
+            color: #666;
+        }
+        .error-fun-fact strong {
+            color: #191919;
+        }
+        @media (max-width: 768px) {
+            .error-container {
+                margin: 40px 20px;
+                padding: 40px 20px;
+            }
+            .error-code {
+                font-size: 100px;
+            }
+            .trust-items {
+                grid-template-columns: 1fr;
+            }
+            .error-stats {
+                gap: 30px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="error-container">
-        <div class="error-illustration">🔍</div>
-        <h1 class="error-code">404</h1>
-        <h2 class="error-title">Page Not Found</h2>
-        <p class="error-message">
-            Oops! The page you're looking for doesn't exist. It might have been moved or deleted.
+        <div class="trust-badge">✓ Trusted Reviews Platform</div>
+        
+        <div class="error-code-wrapper">
+            <h1 class="error-code">404</h1>
+            <div class="rating-stars">⭐⭐⭐⭐⭐</div>
+        </div>
+        
+        <h2 class="error-title">Oops! This Page Needs a Review</h2>
+        <p class="error-subtitle">
+            We couldn't find the page you're looking for. It might have low ratings! 😅
         </p>
+
+        <!-- Trust Check Box -->
+        <div class="trust-check-box">
+            <div class="trust-check-header">
+                <span class="trust-icon">🛡️</span>
+                <h3 class="trust-check-title">Trust Check: Page Status</h3>
+            </div>
+            <div class="trust-items">
+                <div class="trust-item">
+                    <span class="trust-item-icon">✗</span>
+                    <span>Page Found: <strong style="color: #ff3722;">0%</strong></span>
+                </div>
+                <div class="trust-item">
+                    <span class="trust-item-icon">✓</span>
+                    <span>Your Safety: <strong>100%</strong></span>
+                </div>
+                <div class="trust-item">
+                    <span class="trust-item-icon">✓</span>
+                    <span>Platform Status: <strong>Active</strong></span>
+                </div>
+                <div class="trust-item">
+                    <span class="trust-item-icon">✓</span>
+                    <span>Reviews Working: <strong>Yes</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platform Stats -->
+        <div class="error-stats">
+            <div class="error-stat">
+                <span class="error-stat-number">4.8</span>
+                <span class="error-stat-label">⭐ Platform Rating</span>
+            </div>
+            <div class="error-stat">
+                <span class="error-stat-number">99.9%</span>
+                <span class="error-stat-label">🛡️ Uptime</span>
+            </div>
+            <div class="error-stat">
+                <span class="error-stat-number">100%</span>
+                <span class="error-stat-label">✓ Verified Reviews</span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
         <div class="error-actions">
-            <a href="/" class="error-btn error-btn-primary">Go to Homepage</a>
-            <a href="/search" class="error-btn error-btn-secondary">Search People</a>
+            <a href="/" class="error-btn error-btn-primary">
+                <span>🏠</span>
+                <span>Go to Homepage</span>
+            </a>
+            <a href="/search" class="error-btn error-btn-secondary">
+                <span>🔍</span>
+                <span>Search People</span>
+            </a>
+        </div>
+
+        <!-- Fun Fact -->
+        <div class="error-fun-fact">
+            <strong>💡 Did you know?</strong> This 404 page has a better rating than the page you were looking for! 
+            Maybe you should review it? 😄
         </div>
     </div>
 </body>

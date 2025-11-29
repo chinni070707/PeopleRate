@@ -1269,6 +1269,11 @@ async def person_detail_page(request: Request, person_id: str):
     """Person detail page"""
     return templates.TemplateResponse("person-detail.html", {"request": request})
 
+@app.get("/search")
+async def search_page(request: Request):
+    """Search page - redirects to homepage with search functionality"""
+    return templates.TemplateResponse("index.html", {"request": request})
+
 @app.get("/legal/terms")
 async def terms_page(request: Request):
     """Terms of Service page"""
