@@ -5,16 +5,26 @@ This directory contains automated tests for the PeopleRate platform.
 ## 📁 Test Files
 
 ### 1. `quick_test.py` - Quick API Testing ⚡
-**Fast, simple API testing without browser automation**
+**Fast, comprehensive API testing without browser automation**
 
 **Features:**
-- ✅ Tests all API endpoints
+- ✅ Tests all API endpoints (16 tests)
 - ✅ Tests page routes (homepage, search, 404)
 - ✅ Tests authentication flow (register, login)
 - ✅ Tests person creation with NLP
-- ✅ Tests review submission
+- ✅ Tests review submission (verified & unverified)
+- ✅ Tests admin dashboard access
+- ✅ Tests profile claiming workflow
 - ✅ Colored console output
 - ✅ Runs in ~10 seconds
+
+**Test Coverage:**
+- **Page Tests (3):** Homepage, Search, Custom 404
+- **Authentication Tests (3):** Registration, Login, Auth verification
+- **Search & Person Tests (3):** Search API, Add Person (NLP), Get Person
+- **Review Tests (4):** Add Review, Get Reviews, Verified Review, Unverified Review
+- **Platform Tests (1):** Platform statistics
+- **Admin & Advanced Features (2):** Admin dashboard, Profile claiming
 
 **Installation:**
 ```bash
@@ -32,12 +42,46 @@ python tests/quick_test.py
 
 **Output Example:**
 ```
+============================================================
+📄 PAGE TESTS
+============================================================
 ✓ Homepage Load: PASSED
-✓ Search Page: PASSED  
+✓ Search Page: PASSED
+✓ 404 Page: PASSED
+
+============================================================
+🔐 AUTHENTICATION TESTS
+============================================================
 ✓ User Registration: PASSED
+✓ User Login: PASSED
+✓ Auth Me Endpoint: PASSED
+
+============================================================
+🔍 SEARCH & PERSON TESTS
+============================================================
+✓ Search API: PASSED
 ✓ Add Person (NLP): PASSED
+✓ Get Person: PASSED
+
+============================================================
+⭐ REVIEW TESTS
+============================================================
 ✓ Add Review: PASSED
-...
+✓ Get Reviews: PASSED
+✓ Verified Review: PASSED
+✓ Unverified Review: PASSED
+
+============================================================
+📊 PLATFORM TESTS
+============================================================
+✓ Platform Stats: PASSED
+
+============================================================
+🔐 ADMIN & ADVANCED FEATURES
+============================================================
+✓ Admin Dashboard: PASSED
+✓ Profile Claiming: PASSED
+
 🎉 ALL TESTS PASSED! 🎉
 ```
 
